@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { api, getToken, setToken } from './api.js';
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { api, getToken, setToken } from "./api.js";
 
 const AuthContext = createContext(null);
 
@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
       setReady(true);
       return;
     }
-    api('/api/auth/me', { auth: true })
+    api("/api/auth/me", { auth: true })
       .then((data) => setUser(data.user))
       .catch(() => {
         setToken(null);
@@ -34,6 +34,9 @@ export function AuthProvider({ children }) {
         setToken(null);
         setUser(null);
       },
+      updateUser(nextUser) {
+        setUser(nextUser);
+      },
     }),
     [user, ready],
   );
@@ -43,6 +46,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
 }

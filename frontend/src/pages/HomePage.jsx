@@ -5,9 +5,10 @@ import { useAuth } from "../auth.jsx";
 import PassengerDashboard from "../components/PassengerDashboard.jsx";
 import DriverDashboard from "../components/DriverDashboard.jsx";
 import Sidebar, { MobileTabs } from "../components/Sidebar.jsx";
+import ProfilePage from "../components/ProfilePage.jsx";
 
 export default function HomePage() {
-  const { user, signOut, ready } = useAuth();
+  const { user, signOut, updateUser, ready } = useAuth();
   const [activeSection, setActiveSection] = useState(null);
 
   useEffect(() => {
@@ -138,12 +139,16 @@ export default function HomePage() {
         />
 
         <main className="mx-auto max-w-6xl px-6 py-8">
-          {activeSection &&
+          {activeSection === "profile" ? (
+            <ProfilePage user={user} updateUser={updateUser} />
+          ) : (
+            activeSection &&
             (user.role === "driver" ? (
               <DriverDashboard user={user} section={activeSection} />
             ) : (
               <PassengerDashboard user={user} section={activeSection} />
-            ))}
+            ))
+          )}
         </main>
       </div>
     </div>

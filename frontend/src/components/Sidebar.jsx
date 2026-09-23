@@ -5,16 +5,19 @@ import {
   Radar,
   History,
   Car,
+  UserRound,
 } from "lucide-react";
 
 export const NAV_ITEMS = {
   driver: [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "history", label: "Trip History", icon: History },
+    { id: "profile", label: "Profile", icon: UserRound },
   ],
   passenger: [
     { id: "ride", label: "Book a Ride", icon: Car },
     { id: "history", label: "Trip History", icon: History },
+    { id: "profile", label: "Profile", icon: UserRound },
   ],
 };
 

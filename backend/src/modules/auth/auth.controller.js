@@ -1,7 +1,16 @@
-import { asyncHandler } from '../../middleware/errorHandler.js';
-import { publicUser, requireAuth } from '../../middleware/auth.js';
-import { validate, registerSchema, loginSchema, verifyEmailSchema, resendSchema, forgotSchema, resetSchema } from './auth.validators.js';
-import * as authService from './auth.service.js';
+import { asyncHandler } from "../../middleware/errorHandler.js";
+import { publicUser, requireAuth } from "../../middleware/auth.js";
+import {
+  validate,
+  registerSchema,
+  loginSchema,
+  verifyEmailSchema,
+  resendSchema,
+  forgotSchema,
+  resetSchema,
+  profileSchema,
+} from "./auth.validators.js";
+import * as authService from "./auth.service.js";
 
 export const register = [
   validate(registerSchema),
@@ -28,9 +37,11 @@ export const verifyEmail = [
 ];
 
 export const verifyEmailLink = asyncHandler(async (req, res) => {
-  const token = String(req.query.token || '');
+  const token = String(req.query.token || "");
   if (!token) {
-    res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Missing token.' } });
+    res
+      .status(400)
+      .json({ error: { code: "VALIDATION_ERROR", message: "Missing token." } });
     return;
   }
   const data = await authService.verifyEmailWithToken(token);
@@ -65,5 +76,18 @@ export const me = [
   requireAuth,
   asyncHandler(async (req, res) => {
     res.json({ user: publicUser(req.user) });
+  }),
+];
+
+export const updateProfile = [
+  requireAuth,
+  validate(profileSchema),
+  asyncHandler(async (req, res) => {
+    const data = await authService.updateProfile(
+      req.user.id,
+      req.user.role,
+      req.body,
+    );
+    res.json(data);
   }),
 ];
