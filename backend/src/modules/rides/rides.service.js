@@ -14,17 +14,22 @@ async function getZoneOrThrow(client, zoneId, label = 'Zone') {
 }
 
 /**
- * Estimate fare between two zones
+ * Estimate fare between two zones (optionally using exact coordinates)
  */
-export async function estimateRide({ pickupZoneId, dropoffZoneId, seats }) {
+export async function estimateRide({ pickupZoneId, dropoffZoneId, seats, pickupLat, pickupLng, dropoffLat, dropoffLng }) {
   const pickup = await getZoneOrThrow({ query }, pickupZoneId, 'Pickup zone');
   const dropoff = await getZoneOrThrow({ query }, dropoffZoneId, 'Dropoff zone');
 
+  const startLat = pickupLat !== undefined ? Number(pickupLat) : Number(pickup.latitude);
+  const startLng = pickupLng !== undefined ? Number(pickupLng) : Number(pickup.longitude);
+  const destLat = dropoffLat !== undefined ? Number(dropoffLat) : Number(dropoff.latitude);
+  const destLng = dropoffLng !== undefined ? Number(dropoffLng) : Number(dropoff.longitude);
+
   const distanceKm = calculateDistanceKm(
-    Number(pickup.latitude),
-    Number(pickup.longitude),
-    Number(dropoff.latitude),
-    Number(dropoff.longitude),
+    startLat,
+    startLng,
+    destLat,
+    destLng,
   );
 
   const soloFare = calculateFare({ distanceKm, seats, isPooled: false });
@@ -35,6 +40,10 @@ export async function estimateRide({ pickupZoneId, dropoffZoneId, seats }) {
     dropoffZone: dropoff,
     distanceKm,
     seats,
+    pickupLat: startLat,
+    pickupLng: startLng,
+    dropoffLat: destLat,
+    dropoffLng: destLng,
     soloFare,
     pooledFare,
     estimatedFarePaisa: pooledFare.finalFarePaisa,
@@ -45,7 +54,16 @@ export async function estimateRide({ pickupZoneId, dropoffZoneId, seats }) {
 /**
  * Passenger requests a ride
  */
-export async function createRideRequest({ passengerId, pickupZoneId, dropoffZoneId, seats }) {
+export async function createRideRequest({
+  passengerId,
+  pickupZoneId,
+  dropoffZoneId,
+  seats,
+  pickupLat,
+  pickupLng,
+  dropoffLat,
+  dropoffLng,
+}) {
   // Check if passenger already has an active request or active ride
   const { rows: activeReqs } = await query(
     `SELECT r.id, r.status
@@ -65,11 +83,16 @@ export async function createRideRequest({ passengerId, pickupZoneId, dropoffZone
   const pickup = await getZoneOrThrow({ query }, pickupZoneId, 'Pickup zone');
   const dropoff = await getZoneOrThrow({ query }, dropoffZoneId, 'Dropoff zone');
 
+  const startLat = pickupLat !== undefined ? Number(pickupLat) : Number(pickup.latitude);
+  const startLng = pickupLng !== undefined ? Number(pickupLng) : Number(pickup.longitude);
+  const destLat = dropoffLat !== undefined ? Number(dropoffLat) : Number(dropoff.latitude);
+  const destLng = dropoffLng !== undefined ? Number(dropoffLng) : Number(dropoff.longitude);
+
   const distanceKm = calculateDistanceKm(
-    Number(pickup.latitude),
-    Number(pickup.longitude),
-    Number(dropoff.latitude),
-    Number(dropoff.longitude),
+    startLat,
+    startLng,
+    destLat,
+    destLng,
   );
 
   // Default estimate reflects pooled pricing
@@ -78,11 +101,22 @@ export async function createRideRequest({ passengerId, pickupZoneId, dropoffZone
   const result = await withTransaction(async (client) => {
     const { rows: inserted } = await client.query(
       `INSERT INTO ride_requests (
-         passenger_id, pickup_zone_id, dropoff_zone_id, seats, status, estimated_fare_paisa
+         passenger_id, pickup_zone_id, dropoff_zone_id, seats, status, estimated_fare_paisa,
+         pickup_lat, pickup_lng, dropoff_lat, dropoff_lng
        )
-       VALUES ($1, $2, $3, $4, 'waiting', $5)
+       VALUES ($1, $2, $3, $4, 'waiting', $5, $6, $7, $8, $9)
        RETURNING *`,
-      [passengerId, pickupZoneId, dropoffZoneId, seats, fareResult.finalFarePaisa],
+      [
+        passengerId,
+        pickupZoneId,
+        dropoffZoneId,
+        seats,
+        fareResult.finalFarePaisa,
+        startLat,
+        startLng,
+        destLat,
+        destLng,
+      ],
     );
 
     const createdReq = inserted[0];
@@ -93,7 +127,7 @@ export async function createRideRequest({ passengerId, pickupZoneId, dropoffZone
          request_id, actor_id, event_type, from_status, to_status, payload
        )
        VALUES ($1, $2, 'REQUEST_CREATED', NULL, 'waiting', $3)`,
-      [createdReq.id, passengerId, JSON.stringify({ seats, distanceKm, estimatedFarePaisa: fareResult.finalFarePaisa })],
+      [createdReq.id, passengerId, JSON.stringify({ seats, distanceKm, estimatedFarePaisa: fareResult.finalFarePaisa, startLat, startLng, destLat, destLng })],
     );
 
     return createdReq;
@@ -121,6 +155,10 @@ export async function getActivePassengerRide(passengerId) {
        req.status AS request_status,
        req.estimated_fare_paisa,
        req.created_at AS request_created_at,
+       COALESCE(req.pickup_lat, pz.latitude) AS pickup_lat,
+       COALESCE(req.pickup_lng, pz.longitude) AS pickup_lng,
+       COALESCE(req.dropoff_lat, dz.latitude) AS dropoff_lat,
+       COALESCE(req.dropoff_lng, dz.longitude) AS dropoff_lng,
        pz.name AS pickup_zone_name,
        dz.name AS dropoff_zone_name,
        rp.fare_paisa AS actual_fare_paisa,
@@ -255,6 +293,10 @@ export async function getPassengerHistory(passengerId) {
        req.estimated_fare_paisa,
        req.created_at,
        req.cancelled_at,
+       COALESCE(req.pickup_lat, pz.latitude) AS pickup_lat,
+       COALESCE(req.pickup_lng, pz.longitude) AS pickup_lng,
+       COALESCE(req.dropoff_lat, dz.latitude) AS dropoff_lat,
+       COALESCE(req.dropoff_lng, dz.longitude) AS dropoff_lng,
        pz.name AS pickup_zone_name,
        dz.name AS dropoff_zone_name,
        rp.fare_paisa AS final_fare_paisa,

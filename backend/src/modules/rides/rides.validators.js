@@ -6,6 +6,10 @@ export const estimateSchema = z
     pickupZoneId: z.string().uuid('Invalid pickup zone ID'),
     dropoffZoneId: z.string().uuid('Invalid dropoff zone ID'),
     seats: z.coerce.number().int().min(1).max(3).default(1),
+    pickupLat: z.coerce.number().optional(),
+    pickupLng: z.coerce.number().optional(),
+    dropoffLat: z.coerce.number().optional(),
+    dropoffLng: z.coerce.number().optional(),
   })
   .refine((data) => data.pickupZoneId !== data.dropoffZoneId, {
     message: 'Pickup and dropoff zones cannot be the same',
@@ -17,6 +21,10 @@ export const createRideRequestSchema = z
     pickupZoneId: z.string().uuid('Invalid pickup zone ID'),
     dropoffZoneId: z.string().uuid('Invalid dropoff zone ID'),
     seats: z.coerce.number().int().min(1).max(3).default(1),
+    pickupLat: z.coerce.number().optional(),
+    pickupLng: z.coerce.number().optional(),
+    dropoffLat: z.coerce.number().optional(),
+    dropoffLng: z.coerce.number().optional(),
   })
   .refine((data) => data.pickupZoneId !== data.dropoffZoneId, {
     message: 'Pickup and dropoff zones cannot be the same',

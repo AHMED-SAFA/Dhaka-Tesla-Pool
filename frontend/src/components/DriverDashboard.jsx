@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import RideMap from './RideMap.jsx';
 
 export default function DriverDashboard({ user }) {
   const [tesla, setTesla] = useState(null);
@@ -181,6 +182,26 @@ export default function DriverDashboard({ user }) {
               </span>
             </div>
 
+            {/* In-Trip Live Navigation Map */}
+            <div className="driver-map-section" style={{ marginBottom: '16px' }}>
+              <div className="map-title-row">
+                <strong>🗺️ Route Navigation Map</strong>
+                <span className="status-pill pill-completed">
+                  {activeRide.status === 'started'
+                    ? '🚀 In Progress'
+                    : activeRide.status === 'driver_arrived'
+                    ? '📍 Arrived at Pickup'
+                    : '⚡ Heading to Joining Spot'}
+                </span>
+              </div>
+              <RideMap
+                mode="driver-navigation"
+                height="300px"
+                passengers={activeRide.passengers || []}
+                activeRideStatus={activeRide.status}
+              />
+            </div>
+
             {/* Capacity Meter */}
             <div className="capacity-meter">
               <div className="capacity-label">
@@ -199,7 +220,7 @@ export default function DriverDashboard({ user }) {
               </div>
             </div>
 
-            {/* Passengers currently on board */}
+            {/* Passengers currently on board with joining location details */}
             <h4>Passengers in this Pool ({activeRide.passengers?.length || 0}):</h4>
             <div className="passenger-pool-list">
               {activeRide.passengers?.map((p) => (
@@ -209,7 +230,12 @@ export default function DriverDashboard({ user }) {
                     <span className="badge-seat">{p.seats} seat(s)</span>
                   </div>
                   <div className="passenger-route">
-                    {p.pickup_zone_name} ➔ {p.dropoff_zone_name}
+                    <span className="route-from">📍 Joining at: <strong>{p.pickup_zone_name}</strong></span>
+                    <span className="route-arrow">➔</span>
+                    <span className="route-to">🏁 Drop-off: <strong>{p.dropoff_zone_name}</strong></span>
+                  </div>
+                  <div className="passenger-coords muted-small">
+                    Joining spot: Lat {Number(p.pickup_lat).toFixed(4)}, Lng {Number(p.pickup_lng).toFixed(4)}
                   </div>
                   <div className="passenger-fare">
                     Fare: {(p.fare_paisa / 100).toFixed(2)} BDT
@@ -303,6 +329,12 @@ export default function DriverDashboard({ user }) {
                     <div className="queue-details">
                       <span>👤 {req.passenger_name} ({req.seats} {req.seats > 1 ? 'seats' : 'seat'})</span>
                       <span className="fare-tag">{(req.estimated_fare_paisa / 100).toFixed(2)} BDT</span>
+                    </div>
+
+                    <div className="joining-badge-row">
+                      <span className="joining-tag">
+                        📍 Joining at: {req.pickup_zone_name} ({Number(req.pickup_lat).toFixed(3)}, {Number(req.pickup_lng).toFixed(3)})
+                      </span>
                     </div>
 
                     <div className="queue-actions">

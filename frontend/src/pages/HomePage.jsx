@@ -21,7 +21,7 @@ export default function HomePage() {
           <a className="brand" href="/">
             ⚡ Dhaka Tesla Pool
           </a>
-          <span className="brand-badge">Banani Rush-Hour</span>
+          <span className="brand-badge">Pool your Tesla</span>
         </div>
         <nav>
           {user ? (

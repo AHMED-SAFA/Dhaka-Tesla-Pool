@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import RideMap from './RideMap.jsx';
 
 export default function PassengerDashboard({ user }) {
   const [zones, setZones] = useState([]);
   const [pickupZoneId, setPickupZoneId] = useState('');
   const [dropoffZoneId, setDropoffZoneId] = useState('');
   const [seats, setSeats] = useState(1);
+
+  // Exact drop-off coordinates
+  const [customDropoff, setCustomDropoff] = useState(null);
 
   const [estimate, setEstimate] = useState(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
@@ -19,6 +23,9 @@ export default function PassengerDashboard({ user }) {
 
   const [history, setHistory] = useState([]);
 
+  const selectedPickupZone = zones.find((z) => z.id === pickupZoneId);
+  const selectedDropoffZone = zones.find((z) => z.id === dropoffZoneId);
+
   // Load Dhaka zones
   useEffect(() => {
     api('/api/zones')
@@ -30,10 +37,24 @@ export default function PassengerDashboard({ user }) {
           const mohakhali = data.zones.find((z) => z.slug === 'mohakhali') || data.zones[1];
           setPickupZoneId(banani.id);
           setDropoffZoneId(mohakhali.id);
+          setCustomDropoff({
+            lat: Number(mohakhali.latitude),
+            lng: Number(mohakhali.longitude),
+          });
         }
       })
       .catch((e) => setErrorMsg(e.message));
   }, []);
+
+  // When dropoff zone selection changes, set default pin to that zone's center
+  useEffect(() => {
+    if (selectedDropoffZone) {
+      setCustomDropoff({
+        lat: Number(selectedDropoffZone.latitude),
+        lng: Number(selectedDropoffZone.longitude),
+      });
+    }
+  }, [dropoffZoneId]);
 
   // Poll active ride every 3s
   const fetchActive = async () => {
@@ -63,7 +84,7 @@ export default function PassengerDashboard({ user }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Update fare estimate when pickup, dropoff, or seats change
+  // Update fare estimate when pickup, dropoff, seats or pinned dropoff coordinates change
   useEffect(() => {
     if (!pickupZoneId || !dropoffZoneId || pickupZoneId === dropoffZoneId) {
       setEstimate(null);
@@ -71,15 +92,25 @@ export default function PassengerDashboard({ user }) {
     }
 
     setEstimateLoading(true);
+    const body = {
+      pickupZoneId,
+      dropoffZoneId,
+      seats: Number(seats),
+      pickupLat: selectedPickupZone ? Number(selectedPickupZone.latitude) : undefined,
+      pickupLng: selectedPickupZone ? Number(selectedPickupZone.longitude) : undefined,
+      dropoffLat: customDropoff?.lat,
+      dropoffLng: customDropoff?.lng,
+    };
+
     api('/api/rides/estimate', {
       method: 'POST',
       auth: true,
-      body: { pickupZoneId, dropoffZoneId, seats: Number(seats) },
+      body,
     })
       .then((data) => setEstimate(data))
       .catch(() => setEstimate(null))
       .finally(() => setEstimateLoading(false));
-  }, [pickupZoneId, dropoffZoneId, seats]);
+  }, [pickupZoneId, dropoffZoneId, seats, customDropoff?.lat, customDropoff?.lng]);
 
   // Request ride handler
   async function handleRequestRide(e) {
@@ -91,7 +122,15 @@ export default function PassengerDashboard({ user }) {
       await api('/api/rides/requests', {
         method: 'POST',
         auth: true,
-        body: { pickupZoneId, dropoffZoneId, seats: Number(seats) },
+        body: {
+          pickupZoneId,
+          dropoffZoneId,
+          seats: Number(seats),
+          pickupLat: selectedPickupZone ? Number(selectedPickupZone.latitude) : undefined,
+          pickupLng: selectedPickupZone ? Number(selectedPickupZone.longitude) : undefined,
+          dropoffLat: customDropoff?.lat,
+          dropoffLng: customDropoff?.lng,
+        },
       });
       setSuccessMsg('Ride requested! Looking for a Tesla with available seats...');
       await fetchActive();
@@ -126,7 +165,7 @@ export default function PassengerDashboard({ user }) {
   return (
     <div className="dashboard-grid">
       {/* Left Column: Request Ride or Active Ride */}
-      <div className="dashboard-col">
+      <div className="dashboard-col full-width-booking">
         {errorMsg && <div className="alert">{errorMsg}</div>}
         {successMsg && <div className="success">{successMsg}</div>}
 
@@ -143,7 +182,25 @@ export default function PassengerDashboard({ user }) {
               {activeRide.pickup_zone_name} ➔ {activeRide.dropoff_zone_name}
             </h3>
 
-            <div className="ride-meta-grid">
+            {/* In-Trip / Matched Map View for Passenger */}
+            <div className="active-map-section">
+              <RideMap
+                mode="passenger-active"
+                height="280px"
+                pickup={{
+                  lat: Number(activeRide.pickup_lat),
+                  lng: Number(activeRide.pickup_lng),
+                  label: activeRide.pickup_zone_name,
+                }}
+                dropoff={{
+                  lat: Number(activeRide.dropoff_lat),
+                  lng: Number(activeRide.dropoff_lng),
+                  label: activeRide.dropoff_zone_name,
+                }}
+              />
+            </div>
+
+            <div className="ride-meta-grid" style={{ marginTop: '16px' }}>
               <div className="meta-item">
                 <span className="meta-label">Seats Booked</span>
                 <span className="meta-val">👤 {activeRide.seats} {activeRide.seats > 1 ? 'seats' : 'seat'}</span>
@@ -202,82 +259,149 @@ export default function PassengerDashboard({ user }) {
           <div className="card booking-card">
             <span className="eyebrow">Request a Shared Tesla</span>
             <h2>Book Your Pool Seat</h2>
-            <form onSubmit={handleRequestRide}>
-              <div className="field">
-                <label>Pickup Zone</label>
-                <select
-                  value={pickupZoneId}
-                  onChange={(e) => setPickupZoneId(e.target.value)}
-                  required
-                >
-                  <option value="">Select pickup zone</option>
-                  {zones.map((z) => (
-                    <option key={z.id} value={z.id} disabled={z.id === dropoffZoneId}>
-                      {z.name}
-                    </option>
-                  ))}
-                </select>
+
+            {/* Side-by-Side: Form Controls on Left, Interactive Map on Right */}
+            <div className="booking-side-by-side">
+              <div className="booking-form-col">
+                <form onSubmit={handleRequestRide}>
+                  <div className="field">
+                    <label>Pickup Zone</label>
+                    <select
+                      value={pickupZoneId}
+                      onChange={(e) => setPickupZoneId(e.target.value)}
+                      required
+                    >
+                      <option value="">Select pickup zone</option>
+                      {zones.map((z) => (
+                        <option key={z.id} value={z.id} disabled={z.id === dropoffZoneId}>
+                          {z.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="field">
+                    <label>Destination Zone</label>
+                    <select
+                      value={dropoffZoneId}
+                      onChange={(e) => setDropoffZoneId(e.target.value)}
+                      required
+                    >
+                      <option value="">Select destination zone</option>
+                      {zones.map((z) => (
+                        <option key={z.id} value={z.id} disabled={z.id === pickupZoneId}>
+                          {z.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="field">
+                    <label>Seats Needed</label>
+                    <select
+                      value={seats}
+                      onChange={(e) => setSeats(Number(e.target.value))}
+                    >
+                      <option value={1}>1 Passenger (Solo Seat)</option>
+                      <option value={2}>2 Passengers</option>
+                      <option value={3}>3 Passengers (Entire Bullet Tesla)</option>
+                    </select>
+                  </div>
+
+                  {estimate && (
+                    <div className="estimate-box">
+                      <div className="estimate-header">
+                        <span>Distance: ~{estimate.distanceKm} km</span>
+                        <span className="pool-badge">Pool Discount (20% OFF)</span>
+                      </div>
+                      <div className="estimate-breakdown">
+                        <div>Base fare: {estimate.pooledFare.baseFareBDT} BDT</div>
+                        <div>Distance: {estimate.pooledFare.distanceChargeBDT} BDT</div>
+                        <div className="discount-text">- {estimate.pooledFare.poolDiscountBDT} BDT</div>
+                      </div>
+                      <div className="estimate-total">
+                        <span>Estimated Fare:</span>
+                        <span className="fare-number">{estimate.estimatedFareBDT} BDT</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={submitting || !pickupZoneId || !dropoffZoneId || pickupZoneId === dropoffZoneId}
+                  >
+                    {submitting ? 'Requesting...' : 'Request Tesla Pool Ride'}
+                  </button>
+                </form>
               </div>
 
-              <div className="field">
-                <label>Destination Zone</label>
-                <select
-                  value={dropoffZoneId}
-                  onChange={(e) => setDropoffZoneId(e.target.value)}
-                  required
-                >
-                  <option value="">Select destination zone</option>
-                  {zones.map((z) => (
-                    <option key={z.id} value={z.id} disabled={z.id === pickupZoneId}>
-                      {z.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="field">
-                <label>Seats Needed</label>
-                <select
-                  value={seats}
-                  onChange={(e) => setSeats(Number(e.target.value))}
-                >
-                  <option value={1}>1 Passenger (Solo Seat)</option>
-                  <option value={2}>2 Passengers</option>
-                  <option value={3}>3 Passengers (Entire Bullet Tesla)</option>
-                </select>
-              </div>
-
-              {estimate && (
-                <div className="estimate-box">
-                  <div className="estimate-header">
-                    <span>Distance: ~{estimate.distanceKm} km</span>
-                    <span className="pool-badge">Pool Discount (20% OFF)</span>
+              {/* Side-by-Side Map Column: Pinpoint Drop-off Spot */}
+              <div className="booking-map-col">
+                <div className="map-col-header">
+                  <div>
+                    <strong>🗺️ Set Exact Drop-off Spot</strong>
+                    <div className="muted-small">
+                      In {selectedDropoffZone?.name || 'Destination'} — Click map or drag red marker
+                    </div>
                   </div>
-                  <div className="estimate-breakdown">
-                    <div>Base fare: {estimate.pooledFare.baseFareBDT} BDT</div>
-                    <div>Distance: {estimate.pooledFare.distanceChargeBDT} BDT</div>
-                    <div className="discount-text">- {estimate.pooledFare.poolDiscountBDT} BDT</div>
-                  </div>
-                  <div className="estimate-total">
-                    <span>Estimated Fare:</span>
-                    <span className="fare-number">{estimate.estimatedFareBDT} BDT</span>
-                  </div>
+                  {selectedDropoffZone && (
+                    <span className="zone-tag">📍 {selectedDropoffZone.name}</span>
+                  )}
                 </div>
-              )}
 
-              <button
-                type="submit"
-                disabled={submitting || !pickupZoneId || !dropoffZoneId || pickupZoneId === dropoffZoneId}
-              >
-                {submitting ? 'Requesting...' : 'Request Tesla Pool Ride'}
-              </button>
-            </form>
+                <RideMap
+                  mode="passenger-select"
+                  height="360px"
+                  pickup={
+                    selectedPickupZone
+                      ? {
+                          lat: Number(selectedPickupZone.latitude),
+                          lng: Number(selectedPickupZone.longitude),
+                          label: selectedPickupZone.name,
+                        }
+                      : null
+                  }
+                  dropoff={
+                    customDropoff
+                      ? {
+                          lat: customDropoff.lat,
+                          lng: customDropoff.lng,
+                          label: `${selectedDropoffZone?.name || 'Drop-off'} (Pin)`,
+                        }
+                      : null
+                  }
+                  onDropoffChange={(coords) => setCustomDropoff(coords)}
+                />
+
+                {customDropoff && (
+                  <div className="pin-coords-bar">
+                    <span className="coords-text">
+                      📍 Lat: <strong>{customDropoff.lat.toFixed(4)}</strong>, Lng: <strong>{customDropoff.lng.toFixed(4)}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      className="text-btn"
+                      onClick={() => {
+                        if (selectedDropoffZone) {
+                          setCustomDropoff({
+                            lat: Number(selectedDropoffZone.latitude),
+                            lng: Number(selectedDropoffZone.longitude),
+                          });
+                        }
+                      }}
+                    >
+                      Reset to Zone Center
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Right Column: Trip History & Pricing Guide */}
-      <div className="dashboard-col">
+      {/* Right Column: Trip History */}
+      <div className="dashboard-col full-width-history">
         <div className="card history-card">
           <span className="eyebrow">Trip History</span>
           <h2>Your Rides</h2>

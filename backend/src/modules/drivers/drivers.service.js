@@ -115,11 +115,16 @@ export async function getActiveDriverRide(driverId) {
        rp.seats,
        rp.fare_paisa,
        rp.status AS passenger_status,
+       COALESCE(rp.pickup_lat, req.pickup_lat, pz.latitude) AS pickup_lat,
+       COALESCE(rp.pickup_lng, req.pickup_lng, pz.longitude) AS pickup_lng,
+       COALESCE(rp.dropoff_lat, req.dropoff_lat, dz.latitude) AS dropoff_lat,
+       COALESCE(rp.dropoff_lng, req.dropoff_lng, dz.longitude) AS dropoff_lng,
        u.full_name AS passenger_name,
        u.phone AS passenger_phone,
        pz.name AS pickup_zone_name,
        dz.name AS dropoff_zone_name
      FROM ride_passengers rp
+     JOIN ride_requests req ON req.id = rp.request_id
      JOIN users u ON u.id = rp.passenger_id
      JOIN zones pz ON pz.id = rp.pickup_zone_id
      JOIN zones dz ON dz.id = rp.dropoff_zone_id
@@ -169,12 +174,12 @@ export async function getAvailableRequests(driverId) {
        u.full_name AS passenger_name,
        pz.id AS pickup_zone_id,
        pz.name AS pickup_zone_name,
-       pz.latitude AS pickup_lat,
-       pz.longitude AS pickup_lng,
+       COALESCE(req.pickup_lat, pz.latitude) AS pickup_lat,
+       COALESCE(req.pickup_lng, pz.longitude) AS pickup_lng,
        dz.id AS dropoff_zone_id,
        dz.name AS dropoff_zone_name,
-       dz.latitude AS dropoff_lat,
-       dz.longitude AS dropoff_lng
+       COALESCE(req.dropoff_lat, dz.latitude) AS dropoff_lat,
+       COALESCE(req.dropoff_lng, dz.longitude) AS dropoff_lng
      FROM ride_requests req
      JOIN users u ON u.id = req.passenger_id
      JOIN zones pz ON pz.id = req.pickup_zone_id
@@ -303,12 +308,18 @@ export async function acceptRideRequest(driverId, requestId) {
       await client.query(`UPDATE teslas SET ops_status = 'on_trip' WHERE id = $1`, [tesla.id]);
     }
 
+    const pLat = request.pickup_lat !== null && request.pickup_lat !== undefined ? Number(request.pickup_lat) : Number(request.p_lat);
+    const pLng = request.pickup_lng !== null && request.pickup_lng !== undefined ? Number(request.pickup_lng) : Number(request.p_lng);
+    const dLat = request.dropoff_lat !== null && request.dropoff_lat !== undefined ? Number(request.dropoff_lat) : Number(request.d_lat);
+    const dLng = request.dropoff_lng !== null && request.dropoff_lng !== undefined ? Number(request.dropoff_lng) : Number(request.d_lng);
+
     // 4. Add passenger to ride
     const { rows: insertedPassenger } = await client.query(
       `INSERT INTO ride_passengers (
-         ride_id, request_id, passenger_id, pickup_zone_id, dropoff_zone_id, seats, fare_paisa, status
+         ride_id, request_id, passenger_id, pickup_zone_id, dropoff_zone_id, seats, fare_paisa, status,
+         pickup_lat, pickup_lng, dropoff_lat, dropoff_lng
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed')
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', $8, $9, $10, $11)
        RETURNING *`,
       [
         ride.id,
@@ -318,6 +329,10 @@ export async function acceptRideRequest(driverId, requestId) {
         request.dropoff_zone_id,
         request.seats,
         fareInfo.finalFarePaisa,
+        pLat,
+        pLng,
+        dLat,
+        dLng,
       ],
     );
 
