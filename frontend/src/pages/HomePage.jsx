@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 import PassengerDashboard from '../components/PassengerDashboard.jsx';
 import DriverDashboard from '../components/DriverDashboard.jsx';
-import QuickDemoBar from '../components/QuickDemoBar.jsx';
 
 export default function HomePage() {
   const { user, signOut, ready } = useAuth();
@@ -44,9 +43,6 @@ export default function HomePage() {
           )}
         </nav>
       </header>
-
-      {/* Demo Cast Quick-Login Switcher */}
-      <QuickDemoBar />
 
       <main className="main-content">
         {!user ? (

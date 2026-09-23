@@ -63,52 +63,6 @@ export default function LoginPage() {
         <button type="submit" disabled={busy}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
-
-        <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-          <p className="eyebrow" style={{ fontSize: '11px', textAlign: 'center' }}>Demo Cast (1-Click Login)</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
-            <button
-              type="button"
-              className="ghost"
-              style={{ fontSize: '11px', padding: '6px', margin: 0 }}
-              onClick={() => {
-                setForm({ email: 'jashim@tesla.dhaka', password: 'Password123' });
-              }}
-            >
-              🚗 Jashim (Driver)
-            </button>
-            <button
-              type="button"
-              className="ghost"
-              style={{ fontSize: '11px', padding: '6px', margin: 0 }}
-              onClick={() => {
-                setForm({ email: 'nusrat@tesla.dhaka', password: 'Password123' });
-              }}
-            >
-              🚶 Nusrat (Passenger)
-            </button>
-            <button
-              type="button"
-              className="ghost"
-              style={{ fontSize: '11px', padding: '6px', margin: 0 }}
-              onClick={() => {
-                setForm({ email: 'rafiq@tesla.dhaka', password: 'Password123' });
-              }}
-            >
-              🚶 Rafiq (Passenger)
-            </button>
-            <button
-              type="button"
-              className="ghost"
-              style={{ fontSize: '11px', padding: '6px', margin: 0 }}
-              onClick={() => {
-                setForm({ email: 'shirin@tesla.dhaka', password: 'Password123' });
-              }}
-            >
-              🚶 Shirin (Passenger)
-            </button>
-          </div>
-        </div>
       </form>
     </AuthLayout>
   );
