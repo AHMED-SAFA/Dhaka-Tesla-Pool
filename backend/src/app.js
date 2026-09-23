@@ -3,6 +3,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { env } from './config/env.js';
 import authRoutes from './modules/auth/auth.routes.js';
+import zonesRoutes from './modules/zones/zones.routes.js';
+import ridesRoutes from './modules/rides/rides.routes.js';
+import driversRoutes from './modules/drivers/drivers.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export function createApp() {
@@ -24,6 +27,9 @@ export function createApp() {
   });
 
   app.use('/api/auth', authRoutes);
+  app.use('/api/zones', zonesRoutes);
+  app.use('/api/rides', ridesRoutes);
+  app.use('/api/drivers', driversRoutes);
 
   app.use((req, res) => {
     res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found.' } });

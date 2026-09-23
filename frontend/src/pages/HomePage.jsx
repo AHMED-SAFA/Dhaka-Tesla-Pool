@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
+import PassengerDashboard from '../components/PassengerDashboard.jsx';
+import DriverDashboard from '../components/DriverDashboard.jsx';
+import QuickDemoBar from '../components/QuickDemoBar.jsx';
 
 export default function HomePage() {
   const { user, signOut, ready } = useAuth();
@@ -7,7 +10,7 @@ export default function HomePage() {
   if (!ready) {
     return (
       <div className="page">
-        <p className="muted">Loading…</p>
+        <p className="muted" style={{ padding: '40px', textAlign: 'center' }}>Loading Dhaka Tesla Pool…</p>
       </div>
     );
   }
@@ -15,14 +18,22 @@ export default function HomePage() {
   return (
     <div className="page">
       <header className="topbar">
-        <a className="brand" href="/">
-          Dhaka Tesla Pool
-        </a>
+        <div className="brand-group">
+          <a className="brand" href="/">
+            ⚡ Dhaka Tesla Pool
+          </a>
+          <span className="brand-badge">Banani Rush-Hour</span>
+        </div>
         <nav>
           {user ? (
-            <button type="button" className="ghost" onClick={signOut}>
-              Sign out
-            </button>
+            <div className="user-nav">
+              <span className="user-greeting">
+                <strong>{user.fullName}</strong> ({user.role})
+              </span>
+              <button type="button" className="ghost" onClick={signOut}>
+                Sign out
+              </button>
+            </div>
           ) : (
             <>
               <Link to="/login">Sign in</Link>
@@ -33,20 +44,32 @@ export default function HomePage() {
           )}
         </nav>
       </header>
-      <main className="hero-copy">
-        <p className="eyebrow">Banani rush hour, minus the chaos</p>
-        <h1>Share a seat. Split the fare. Survive Dhaka traffic.</h1>
-        {user ? (
-          <div className="card">
-            <p className="muted">Signed in as</p>
-            <h2>
-              {user.fullName} · {user.role}
-            </h2>
-            <p>{user.email}</p>
-            <p className="muted">Ride request and driver flows come next. Auth is live.</p>
+
+      {/* Demo Cast Quick-Login Switcher */}
+      <QuickDemoBar />
+
+      <main className="main-content">
+        {!user ? (
+          <div className="hero-landing">
+            <span className="eyebrow">Share a seat. Split the fare. Survive Dhaka traffic.</span>
+            <h1>Dhaka Tesla Pool</h1>
+            <p className="hero-sub">
+              Nusrat wants to get from <strong>Banani to Mohakhali</strong>. Rafiq wants to get from <strong>Banani to Gulshan 1</strong>. Jashim's <strong>Bullet</strong> has three seats.
+              Share the Tesla, split the fare fairly, and ride in comfort.
+            </p>
+            <div className="guest-cta-row">
+              <Link to="/login" className="cta-btn">Sign in to Test</Link>
+              <Link to="/register" className="cta-btn-secondary">Register New User</Link>
+            </div>
+          </div>
+        ) : user.role === 'driver' ? (
+          <div className="driver-section">
+            <DriverDashboard user={user} />
           </div>
         ) : (
-          <p className="muted">Create a passenger or driver account to continue. Email verification is required.</p>
+          <div className="passenger-section">
+            <PassengerDashboard user={user} />
+          </div>
         )}
       </main>
     </div>

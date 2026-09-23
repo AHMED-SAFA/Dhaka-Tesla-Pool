@@ -95,3 +95,413 @@ button.ghost, .ghost {
 .hero-copy { padding: 40px 28px 80px; max-width: 720px; }
 .hero-copy .card { width: min(520px, 100%); margin-top: 24px; }
 .btn-link { width: auto; padding: 8px 14px; }
+
+/* Demo Cast Bar */
+.demo-bar {
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 24px;
+}
+.demo-bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.demo-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.demo-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.demo-btn {
+  width: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.demo-btn:hover {
+  background: var(--accent-2);
+  color: #0b1a16;
+}
+.demo-err {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--danger);
+}
+
+/* Main Layout */
+.main-content {
+  padding: 24px 28px 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 860px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.dashboard-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.dashboard-col .card {
+  width: 100%;
+}
+
+/* Brand & Nav */
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  background: rgba(198, 242, 109, 0.15);
+  color: var(--accent);
+  border-radius: 20px;
+  border: 1px solid rgba(198, 242, 109, 0.3);
+}
+.user-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.user-greeting {
+  font-size: 14px;
+  color: var(--muted);
+}
+.user-greeting strong {
+  color: var(--text);
+}
+
+/* Hero Landing */
+.hero-landing {
+  padding: 40px 0;
+  max-width: 680px;
+}
+.hero-landing h1 {
+  font-size: 36px;
+  margin: 12px 0 16px;
+}
+.hero-sub {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+.hero-sub strong {
+  color: var(--accent-2);
+}
+.guest-cta-row {
+  display: flex;
+  gap: 14px;
+}
+.cta-btn {
+  padding: 12px 24px;
+  background: var(--accent);
+  color: #122016;
+  font-weight: 700;
+  border-radius: 10px;
+  text-decoration: none;
+}
+.cta-btn-secondary {
+  padding: 12px 24px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 600;
+  border-radius: 10px;
+  text-decoration: none;
+}
+
+/* Status Badges */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+.status-waiting, .status-offline { background: rgba(255, 255, 255, 0.08); color: var(--muted); }
+.status-online, .status-matched { background: rgba(61, 214, 198, 0.2); color: var(--accent-2); }
+.status-driver_arrived { background: rgba(240, 200, 80, 0.2); color: #f0c850; }
+.status-started, .status-on_trip { background: rgba(198, 242, 109, 0.2); color: var(--accent); }
+.status-completed { background: rgba(142, 224, 168, 0.2); color: var(--ok); }
+.status-cancelled { background: rgba(255, 138, 122, 0.2); color: var(--danger); }
+
+/* Capacity Meter */
+.capacity-pill {
+  font-size: 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 12px;
+  color: var(--muted);
+}
+.capacity-meter {
+  background: var(--bg-2);
+  border-radius: 12px;
+  padding: 14px;
+  margin: 16px 0;
+  border: 1px solid var(--border);
+}
+.capacity-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.meter-bar {
+  height: 10px;
+  background: var(--bg);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  transition: width 0.3s ease;
+}
+
+/* Vehicle & Pool */
+.vehicle-info-box {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+}
+.vehicle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.stage-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--accent-2);
+}
+.stage-arrived { color: #f0c850; font-weight: 600; }
+.stage-started { color: var(--accent); font-weight: 600; }
+
+.passenger-pool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+.pool-passenger-item {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 13px;
+}
+.passenger-name-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.badge-seat {
+  background: rgba(198, 242, 109, 0.15);
+  color: var(--accent);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+/* Fare & Estimate Box */
+.estimate-box {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin: 16px 0;
+  font-size: 13px;
+}
+.estimate-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+.pool-badge {
+  color: var(--accent);
+  font-weight: 600;
+}
+.estimate-breakdown {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-top: 1px dashed var(--border);
+  border-bottom: 1px dashed var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+.discount-text { color: var(--accent); }
+.estimate-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.fare-number {
+  color: var(--accent-2);
+  font-size: 18px;
+}
+
+/* Queue List */
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+.queue-item {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.compatible-border {
+  border-color: rgba(61, 214, 198, 0.5);
+  box-shadow: 0 0 12px rgba(61, 214, 198, 0.1);
+}
+.queue-route-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.compatible-badge {
+  font-size: 11px;
+  color: var(--accent-2);
+  background: rgba(61, 214, 198, 0.15);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+.queue-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+}
+.fare-tag {
+  color: var(--accent);
+  font-weight: 700;
+}
+.btn-accept {
+  background: var(--accent);
+  color: #122016;
+  font-weight: 700;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.btn-disabled {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  cursor: not-allowed;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+/* Lifecycle Actions */
+.lifecycle-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+.danger-btn {
+  background: rgba(255, 138, 122, 0.15);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  padding: 10px;
+  font-weight: 600;
+}
+.online-btn {
+  background: var(--accent);
+  color: #122016;
+  font-weight: 700;
+}
+.note-small {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* History */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.history-item {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 13px;
+}
+.history-route {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.status-pill {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.pill-completed { background: rgba(142, 224, 168, 0.2); color: var(--ok); }
+.pill-cancelled { background: rgba(255, 138, 122, 0.2); color: var(--danger); }
+.pill-started { background: rgba(198, 242, 109, 0.2); color: var(--accent); }
+.pill-waiting { background: rgba(255, 255, 255, 0.1); color: var(--muted); }
+.history-meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+}
+.history-fare {
+  font-weight: 700;
+  color: var(--accent-2);
+}
+.history-date {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
