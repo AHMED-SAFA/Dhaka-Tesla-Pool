@@ -8,9 +8,6 @@ export default function PassengerDashboard({ user }) {
   const [dropoffZoneId, setDropoffZoneId] = useState('');
   const [seats, setSeats] = useState(1);
 
-  // Exact drop-off coordinates
-  const [customDropoff, setCustomDropoff] = useState(null);
-
   const [estimate, setEstimate] = useState(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
 
@@ -37,24 +34,10 @@ export default function PassengerDashboard({ user }) {
           const mohakhali = data.zones.find((z) => z.slug === 'mohakhali') || data.zones[1];
           setPickupZoneId(banani.id);
           setDropoffZoneId(mohakhali.id);
-          setCustomDropoff({
-            lat: Number(mohakhali.latitude),
-            lng: Number(mohakhali.longitude),
-          });
         }
       })
       .catch((e) => setErrorMsg(e.message));
   }, []);
-
-  // When dropoff zone selection changes, set default pin to that zone's center
-  useEffect(() => {
-    if (selectedDropoffZone) {
-      setCustomDropoff({
-        lat: Number(selectedDropoffZone.latitude),
-        lng: Number(selectedDropoffZone.longitude),
-      });
-    }
-  }, [dropoffZoneId]);
 
   // Poll active ride every 3s
   const fetchActive = async () => {
@@ -84,7 +67,7 @@ export default function PassengerDashboard({ user }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Update fare estimate when pickup, dropoff, seats or pinned dropoff coordinates change
+  // Update fare estimate when pickup, dropoff or seats change
   useEffect(() => {
     if (!pickupZoneId || !dropoffZoneId || pickupZoneId === dropoffZoneId) {
       setEstimate(null);
@@ -98,8 +81,8 @@ export default function PassengerDashboard({ user }) {
       seats: Number(seats),
       pickupLat: selectedPickupZone ? Number(selectedPickupZone.latitude) : undefined,
       pickupLng: selectedPickupZone ? Number(selectedPickupZone.longitude) : undefined,
-      dropoffLat: customDropoff?.lat,
-      dropoffLng: customDropoff?.lng,
+      dropoffLat: selectedDropoffZone ? Number(selectedDropoffZone.latitude) : undefined,
+      dropoffLng: selectedDropoffZone ? Number(selectedDropoffZone.longitude) : undefined,
     };
 
     api('/api/rides/estimate', {
@@ -110,7 +93,7 @@ export default function PassengerDashboard({ user }) {
       .then((data) => setEstimate(data))
       .catch(() => setEstimate(null))
       .finally(() => setEstimateLoading(false));
-  }, [pickupZoneId, dropoffZoneId, seats, customDropoff?.lat, customDropoff?.lng]);
+  }, [pickupZoneId, dropoffZoneId, seats]);
 
   // Request ride handler
   async function handleRequestRide(e) {
@@ -128,8 +111,8 @@ export default function PassengerDashboard({ user }) {
           seats: Number(seats),
           pickupLat: selectedPickupZone ? Number(selectedPickupZone.latitude) : undefined,
           pickupLng: selectedPickupZone ? Number(selectedPickupZone.longitude) : undefined,
-          dropoffLat: customDropoff?.lat,
-          dropoffLng: customDropoff?.lng,
+          dropoffLat: selectedDropoffZone ? Number(selectedDropoffZone.latitude) : undefined,
+          dropoffLng: selectedDropoffZone ? Number(selectedDropoffZone.longitude) : undefined,
         },
       });
       setSuccessMsg('Ride requested! Looking for a Tesla with available seats...');
@@ -335,17 +318,21 @@ export default function PassengerDashboard({ user }) {
                 </form>
               </div>
 
-              {/* Side-by-Side Map Column: Pinpoint Drop-off Spot */}
+              {/* Side-by-Side Map Column: Route Preview */}
               <div className="booking-map-col">
                 <div className="map-col-header">
                   <div>
-                    <strong>🗺️ Set Exact Drop-off Spot</strong>
+                    <strong>🗺️ Route Preview</strong>
                     <div className="muted-small">
-                      In {selectedDropoffZone?.name || 'Destination'} — Click map or drag red marker
+                      {selectedPickupZone && selectedDropoffZone
+                        ? `${selectedPickupZone.name} ➔ ${selectedDropoffZone.name}`
+                        : 'Select pickup & drop-off locations to preview route'}
                     </div>
                   </div>
-                  {selectedDropoffZone && (
-                    <span className="zone-tag">📍 {selectedDropoffZone.name}</span>
+                  {selectedPickupZone && selectedDropoffZone && (
+                    <span className="zone-tag">
+                      {selectedPickupZone.name} ➔ {selectedDropoffZone.name}
+                    </span>
                   )}
                 </div>
 
@@ -362,38 +349,15 @@ export default function PassengerDashboard({ user }) {
                       : null
                   }
                   dropoff={
-                    customDropoff
+                    selectedDropoffZone
                       ? {
-                          lat: customDropoff.lat,
-                          lng: customDropoff.lng,
-                          label: `${selectedDropoffZone?.name || 'Drop-off'} (Pin)`,
+                          lat: Number(selectedDropoffZone.latitude),
+                          lng: Number(selectedDropoffZone.longitude),
+                          label: selectedDropoffZone.name,
                         }
                       : null
                   }
-                  onDropoffChange={(coords) => setCustomDropoff(coords)}
                 />
-
-                {customDropoff && (
-                  <div className="pin-coords-bar">
-                    <span className="coords-text">
-                      📍 Lat: <strong>{customDropoff.lat.toFixed(4)}</strong>, Lng: <strong>{customDropoff.lng.toFixed(4)}</strong>
-                    </span>
-                    <button
-                      type="button"
-                      className="text-btn"
-                      onClick={() => {
-                        if (selectedDropoffZone) {
-                          setCustomDropoff({
-                            lat: Number(selectedDropoffZone.latitude),
-                            lng: Number(selectedDropoffZone.longitude),
-                          });
-                        }
-                      }}
-                    >
-                      Reset to Zone Center
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           </div>

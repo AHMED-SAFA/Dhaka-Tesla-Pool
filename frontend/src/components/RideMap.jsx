@@ -1,137 +1,198 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl/mapbox';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import React, { useEffect, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 // Default Dhaka coordinates (Banani area)
-const DHAKA_DEFAULT = {
-  latitude: 23.7937,
-  longitude: 90.4066,
-  zoom: 13,
-};
+const DHAKA_DEFAULT = [23.7937, 90.4066];
 
-// High-clarity raster style that works 100% out-of-the-box without requiring an API key
-const OPEN_STREET_STYLE = {
-  version: 8,
-  sources: {
-    'osm-tiles': {
-      type: 'raster',
-      tiles: [
-        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      ],
-      tileSize: 256,
-      attribution: '&copy; OpenStreetMap contributors',
-    },
-  },
-  layers: [
-    {
-      id: 'osm-tiles-layer',
-      type: 'raster',
-      source: 'osm-tiles',
-      minzoom: 0,
-      maxzoom: 19,
-    },
-  ],
-};
+// Helper to generate marker icon with custom HTML
+function createPinIcon(label, type = 'pickup') {
+  const isDropoff = type === 'dropoff';
+  const html = `
+    <div class="map-pin-anchor">
+      <div class="pin-bubble ${isDropoff ? 'dropoff-bubble' : ''}">
+        <span class="pin-dot ${isDropoff ? 'red-dot' : 'green-dot'}"></span>
+        <span class="pin-label">${label}</span>
+      </div>
+      <div class="pin-arrow ${isDropoff ? 'red-arrow' : ''}"></div>
+    </div>
+  `;
+
+  return L.divIcon({
+    className: 'leaflet-custom-marker',
+    html,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
+}
 
 export default function RideMap({
   mode = 'passenger-select', // 'passenger-select' | 'passenger-active' | 'driver-navigation'
   pickup, // { lat, lng, label }
   dropoff, // { lat, lng, label }
-  passengers = [], // For driver mode: array of { id, name, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, pickup_zone_name, dropoff_zone_name }
-  onDropoffChange, // function({ lat, lng }) for interactive drop place setting
-  onPickupChange,
-  interactive = true,
+  passengers = [], // For driver mode: array of passenger details
   height = '340px',
   activeRideStatus = null,
 }) {
-  const mapRef = useRef(null);
-  const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN || '';
-  const mapStyle = mapboxToken ? 'mapbox://styles/mapbox/streets-v12' : OPEN_STREET_STYLE;
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const layersGroupRef = useRef(null);
 
-  const [viewState, setViewState] = useState({
-    latitude: dropoff?.lat || pickup?.lat || DHAKA_DEFAULT.latitude,
-    longitude: dropoff?.lng || pickup?.lng || DHAKA_DEFAULT.longitude,
-    zoom: 13,
-  });
-
-  // Re-center when dropoff or pickup changes
+  // Initialize Leaflet Map once
   useEffect(() => {
-    const targetLat = dropoff?.lat || pickup?.lat;
-    const targetLng = dropoff?.lng || pickup?.lng;
-    if (targetLat && targetLng && mapRef.current) {
-      mapRef.current.flyTo({
-        center: [targetLng, targetLat],
-        zoom: 13.5,
-        duration: 900,
+    if (!mapContainerRef.current || mapInstanceRef.current) return;
+
+    const initialCenter =
+      pickup?.lat && pickup?.lng
+        ? [pickup.lat, pickup.lng]
+        : dropoff?.lat && dropoff?.lng
+        ? [dropoff.lat, dropoff.lng]
+        : DHAKA_DEFAULT;
+
+    const map = L.map(mapContainerRef.current, {
+      center: initialCenter,
+      zoom: 13,
+      zoomControl: true,
+    });
+
+    // Add reliable OpenStreetMap raster tiles (no API key required)
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
+
+    // Create a LayerGroup to hold markers and routes
+    const layersGroup = L.layerGroup().addTo(map);
+    layersGroupRef.current = layersGroup;
+    mapInstanceRef.current = map;
+
+    // Handle container resize cleanly
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    resizeObserver.observe(mapContainerRef.current);
+
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+
+    return () => {
+      resizeObserver.disconnect();
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  // Update markers, route line, and camera bounds when coordinates or mode change
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const group = layersGroupRef.current;
+    if (!map || !group) return;
+
+    // Clear previous markers and lines
+    group.clearLayers();
+
+    const boundsPoints = [];
+
+    if (mode === 'driver-navigation') {
+      // Driver view: Render all passengers in the pool
+      passengers.forEach((p) => {
+        const pPickup =
+          p.pickup_lat && p.pickup_lng
+            ? [Number(p.pickup_lat), Number(p.pickup_lng)]
+            : null;
+        const pDropoff =
+          p.dropoff_lat && p.dropoff_lng
+            ? [Number(p.dropoff_lat), Number(p.dropoff_lng)]
+            : null;
+
+        if (pPickup) {
+          const marker = L.marker(pPickup, {
+            icon: createPinIcon(
+              `👤 ${p.passenger_name || 'Passenger'} (${p.pickup_zone_name || 'Pickup'})`,
+              'pickup'
+            ),
+          });
+          group.addLayer(marker);
+          boundsPoints.push(pPickup);
+        }
+
+        if (pDropoff) {
+          const marker = L.marker(pDropoff, {
+            icon: createPinIcon(
+              `🏁 ${p.passenger_name || 'Passenger'} Drop-off (${p.dropoff_zone_name || 'Drop-off'})`,
+              'dropoff'
+            ),
+          });
+          group.addLayer(marker);
+          boundsPoints.push(pDropoff);
+        }
+
+        if (pPickup && pDropoff) {
+          const routeLine = L.polyline([pPickup, pDropoff], {
+            color: '#10b981',
+            weight: 4,
+            opacity: 0.85,
+          });
+          group.addLayer(routeLine);
+        }
       });
-    }
-  }, [dropoff?.lat, dropoff?.lng, pickup?.lat, pickup?.lng]);
+    } else {
+      // Passenger mode: Preview or active ride (Where from -> Where to)
+      const hasPickup = pickup?.lat && pickup?.lng;
+      const hasDropoff = dropoff?.lat && dropoff?.lng;
 
-  // Click on map to place or update dropoff point
-  const handleMapClick = (e) => {
-    if (mode === 'passenger-select' && onDropoffChange) {
-      const { lng, lat } = e.lngLat;
-      onDropoffChange({ lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) });
-    }
-  };
+      if (hasPickup) {
+        const pickupPoint = [Number(pickup.lat), Number(pickup.lng)];
+        const marker = L.marker(pickupPoint, {
+          icon: createPinIcon(pickup.label || 'Pickup Location', 'pickup'),
+        });
+        group.addLayer(marker);
+        boundsPoints.push(pickupPoint);
+      }
 
-  // Marker drag end
-  const handleDropoffDragEnd = (e) => {
-    if (onDropoffChange) {
-      const { lng, lat } = e.lngLat;
-      onDropoffChange({ lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) });
-    }
-  };
+      if (hasDropoff) {
+        const dropoffPoint = [Number(dropoff.lat), Number(dropoff.lng)];
+        const marker = L.marker(dropoffPoint, {
+          icon: createPinIcon(dropoff.label || 'Drop-off Destination', 'dropoff'),
+        });
+        group.addLayer(marker);
+        boundsPoints.push(dropoffPoint);
+      }
 
-  // Generate GeoJSON line for route connecting pickup to dropoff
-  const routeGeoJSON = useMemo(() => {
-    if (mode === 'driver-navigation' && passengers.length > 0) {
-      // Connect each passenger's pickup to their dropoff
-      const features = passengers.map((p, idx) => ({
-        type: 'Feature',
-        properties: { id: p.ride_passenger_id || idx },
-        geometry: {
-          type: 'LineString',
-          coordinates: [
-            [Number(p.pickup_lng), Number(p.pickup_lat)],
-            [Number(p.dropoff_lng), Number(p.dropoff_lat)],
-          ],
-        },
-      }));
-      return {
-        type: 'FeatureCollection',
-        features,
-      };
-    }
+      if (hasPickup && hasDropoff) {
+        const routeCoords = [
+          [Number(pickup.lat), Number(pickup.lng)],
+          [Number(dropoff.lat), Number(dropoff.lng)],
+        ];
 
-    if (pickup?.lat && pickup?.lng && dropoff?.lat && dropoff?.lng) {
-      return {
-        type: 'Feature',
-        geometry: {
-          type: 'LineString',
-          coordinates: [
-            [pickup.lng, pickup.lat],
-            [dropoff.lng, dropoff.lat],
-          ],
-        },
-      };
+        // Route line
+        const routeLine = L.polyline(routeCoords, {
+          color: '#3b82f6',
+          weight: 4,
+          dashArray: '8, 8',
+          opacity: 0.9,
+        });
+        group.addLayer(routeLine);
+      }
     }
 
-    return null;
+    // Adjust camera view
+    if (boundsPoints.length > 1) {
+      map.fitBounds(L.latLngBounds(boundsPoints), {
+        padding: [50, 50],
+        maxZoom: 15,
+        animate: true,
+      });
+    } else if (boundsPoints.length === 1) {
+      map.setView(boundsPoints[0], 14, { animate: true });
+    }
   }, [pickup, dropoff, passengers, mode]);
 
   return (
     <div className="ride-map-wrapper" style={{ height }}>
-      {/* Informational overlay badge */}
-      {mode === 'passenger-select' && (
-        <div className="map-guidance-pill">
-          <span>📍 Click map or drag red marker to pinpoint exact drop-off spot</span>
-        </div>
-      )}
-
-      {mode === 'driver-navigation' && (
+      {/* Route Badge Overlay */}
+      {mode === 'driver-navigation' ? (
         <div className="map-guidance-pill driver-pill">
           <span>
             {activeRideStatus === 'started'
@@ -139,128 +200,19 @@ export default function RideMap({
               : '📍 Pick up passengers at their joining locations'}
           </span>
         </div>
+      ) : (
+        pickup?.label && dropoff?.label && (
+          <div className="map-guidance-pill">
+            <span>🗺️ {pickup.label} ➔ {dropoff.label}</span>
+          </div>
+        )
       )}
 
-      <Map
-        ref={mapRef}
-        {...viewState}
-        onMove={(evt) => setViewState(evt.viewState)}
-        onClick={handleMapClick}
-        mapStyle={mapStyle}
-        mapboxAccessToken={mapboxToken || undefined}
-        style={{ width: '100%', height: '100%', borderRadius: '12px' }}
-        cursor={mode === 'passenger-select' ? 'crosshair' : 'grab'}
-      >
-        <NavigationControl position="bottom-right" />
-
-        {/* Route Line */}
-        {routeGeoJSON && (
-          <Source id="route-source" type="geojson" data={routeGeoJSON}>
-            <Layer
-              id="route-layer-casing"
-              type="line"
-              paint={{
-                'line-color': '#000000',
-                'line-width': 6,
-                'line-opacity': 0.35,
-              }}
-            />
-            <Layer
-              id="route-layer"
-              type="line"
-              paint={{
-                'line-color': mode === 'driver-navigation' ? '#10b981' : '#3b82f6',
-                'line-width': 4,
-                'line-dasharray': mode === 'passenger-select' ? [2, 1] : [1, 0],
-              }}
-            />
-          </Source>
-        )}
-
-        {/* Passenger Mode Markers */}
-        {(mode === 'passenger-select' || mode === 'passenger-active') && (
-          <>
-            {/* Pickup Marker (Green) */}
-            {pickup?.lat && pickup?.lng && (
-              <Marker
-                latitude={pickup.lat}
-                longitude={pickup.lng}
-                anchor="bottom"
-              >
-                <div className="map-pin pin-pickup">
-                  <div className="pin-bubble">
-                    <span className="pin-dot green-dot"></span>
-                    <span className="pin-label">{pickup.label || 'Pickup'}</span>
-                  </div>
-                  <div className="pin-arrow"></div>
-                </div>
-              </Marker>
-            )}
-
-            {/* Dropoff Marker (Red - Draggable in select mode) */}
-            {dropoff?.lat && dropoff?.lng && (
-              <Marker
-                latitude={dropoff.lat}
-                longitude={dropoff.lng}
-                anchor="bottom"
-                draggable={mode === 'passenger-select'}
-                onDragEnd={handleDropoffDragEnd}
-              >
-                <div className="map-pin pin-dropoff">
-                  <div className="pin-bubble dropoff-bubble">
-                    <span className="pin-dot red-dot"></span>
-                    <span className="pin-label">{dropoff.label || 'Drop-off Spot'}</span>
-                  </div>
-                  <div className="pin-arrow red-arrow"></div>
-                </div>
-              </Marker>
-            )}
-          </>
-        )}
-
-        {/* Driver Mode Markers */}
-        {mode === 'driver-navigation' && (
-          <>
-            {passengers.map((p, idx) => (
-              <React.Fragment key={p.ride_passenger_id || idx}>
-                {/* Passenger joining location (Pickup) */}
-                {p.pickup_lat && p.pickup_lng && (
-                  <Marker
-                    latitude={Number(p.pickup_lat)}
-                    longitude={Number(p.pickup_lng)}
-                    anchor="bottom"
-                  >
-                    <div className="map-pin pin-pickup">
-                      <div className="pin-bubble">
-                        <span className="pin-dot green-dot"></span>
-                        <span className="pin-label">👤 {p.passenger_name} ({p.pickup_zone_name})</span>
-                      </div>
-                      <div className="pin-arrow"></div>
-                    </div>
-                  </Marker>
-                )}
-
-                {/* Passenger destination (Dropoff) */}
-                {p.dropoff_lat && p.dropoff_lng && (
-                  <Marker
-                    latitude={Number(p.dropoff_lat)}
-                    longitude={Number(p.dropoff_lng)}
-                    anchor="bottom"
-                  >
-                    <div className="map-pin pin-dropoff">
-                      <div className="pin-bubble dropoff-bubble">
-                        <span className="pin-dot red-dot"></span>
-                        <span className="pin-label">🏁 {p.passenger_name} Drop-off ({p.dropoff_zone_name})</span>
-                      </div>
-                      <div className="pin-arrow red-arrow"></div>
-                    </div>
-                  </Marker>
-                )}
-              </React.Fragment>
-            ))}
-          </>
-        )}
-      </Map>
+      <div
+        ref={mapContainerRef}
+        className="ride-map-container"
+        style={{ width: '100%', height: '100%' }}
+      />
     </div>
   );
 }
