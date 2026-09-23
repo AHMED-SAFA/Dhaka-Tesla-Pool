@@ -1,76 +1,94 @@
-// import "@fontsource-variable/fraunces";
 import { Link } from "react-router-dom";
-import { Zap } from "lucide-react";
+import { Zap, Users, ShieldCheck, MapPin, Star } from "lucide-react";
 
-const serif = { fontFamily: "'Fraunces Variable', serif" };
+const STATS = [
+  { value: "50K+", label: "Pooled rides" },
+  { value: "18%", label: "Avg. fare savings" },
+  { value: "90 sec", label: "Avg. match time" },
+  { value: "4.8", label: "Rider rating" },
+];
 
-const TIMELINE = [
-  { time: "8:41 AM", text: "Jashim brings Bullet online at Banani Road 11." },
-  { time: "8:43 AM", text: "Nusrat requests Banani → Mohakhali." },
+const STEPS = [
   {
-    time: "8:45 AM",
-    text: "Rafiq requests Banani → Gulshan 1 — close enough to pool.",
+    title: "Request your ride",
+    text: "Set your pickup and destination anywhere from Gulshan to Mirpur. We show you an upfront fare before you book.",
   },
   {
-    time: "8:51 AM",
-    text: "Shirin tries to grab the last seat. Only one is left.",
+    title: "Get matched & pooled",
+    text: "If someone nearby is headed your way, we pair you into the same car — each rider still pays their own fare.",
+  },
+  {
+    title: "Ride and split fairly",
+    text: "Track your driver in real time, ride together, and pay only for your share of the trip.",
   },
 ];
 
-const ROLES = [
+const FEATURES = [
   {
-    name: "Passenger",
-    detail:
-      "Nusrat, Rafiq, Shirin request seats and track their own fare and status.",
+    icon: ShieldCheck,
+    title: "Verified drivers",
+    text: "Every driver is background-checked and rated by riders after each trip.",
   },
   {
-    name: "Pool",
-    detail:
-      "One Tesla, several trips. Seats never exceed Bullet's fixed capacity.",
+    icon: MapPin,
+    title: "Live tracking",
+    text: "See your driver's location and ETA from the moment you're matched.",
   },
   {
-    name: "Driver",
-    detail: "Jashim sees who's aboard, marks arrival, start, and completion.",
+    icon: Users,
+    title: "Fair per-seat pricing",
+    text: "Pooling never costs you more — you always see your own fare, not a shared guess.",
+  },
+];
+
+const TESTIMONIALS = [
+  {
+    initials: "TR",
+    name: "Tanvir R.",
+    role: "Daily commuter, Banani",
+    quote:
+      "Cut my commute cost almost in half without adding much time to the ride.",
+  },
+  {
+    initials: "MH",
+    name: "Mahia H.",
+    role: "Rider, Dhanmondi",
+    quote:
+      "Matching is quick and I always know who's in the car with me before it arrives.",
+  },
+  {
+    initials: "SK",
+    name: "Shakil K.",
+    role: "Driver partner",
+    quote:
+      "I fill empty seats I'd have driven anyway — it's extra income on the same route.",
   },
 ];
 
 export default function LandingPage() {
   return (
-    <div
-      style={{ background: "#14110D", color: "#F3ECDF" }}
-      className="min-h-screen selection:bg-[#E8A33D]/20"
-    >
-      <style>{`
-        .perforated {
-          background-image: radial-gradient(circle, #14110D 3px, transparent 3px);
-          background-size: 14px 100%;
-          background-position: left center;
-          background-repeat: repeat-x;
-        }
-        .seat-live { animation: seat-pulse 2.2s ease-in-out infinite; }
-        @keyframes seat-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        @media (prefers-reduced-motion: reduce) { .seat-live { animation: none; } }
-      `}</style>
-
+    <div className="min-h-screen bg-white text-neutral-900">
       {/* Nav */}
-      <header className="border-b border-white/[0.06]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <a href="/" className="flex items-center gap-2 text-[#F3ECDF]">
-            <Zap className="h-4 w-4 text-[#E8A33D]" strokeWidth={2.5} />
-            <span style={serif} className="text-lg font-medium">
+      <header className="border-b border-neutral-100">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <a href="/" className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-700 text-white">
+              <Zap className="h-4 w-4" strokeWidth={2.5} />
+            </span>
+            <span className="font-semibold tracking-tight">
               Dhaka Tesla Pool
             </span>
           </a>
           <nav className="flex items-center gap-6 text-sm">
             <Link
               to="/login"
-              className="text-[#A79C89] transition-colors hover:text-[#F3ECDF]"
+              className="text-neutral-600 hover:text-neutral-900"
             >
               Sign in
             </Link>
             <Link
               to="/register"
-              className="rounded-md bg-[#E8A33D] px-4 py-2 font-medium text-[#14110D] transition-colors hover:bg-[#F2B85A]"
+              className="rounded-lg bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800"
             >
               Create account
             </Link>
@@ -79,173 +97,163 @@ export default function LandingPage() {
       </header>
 
       {/* Hero */}
-      <section className="mx-auto grid max-w-6xl gap-12 px-6 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:py-28">
-        <div>
-          <h1
-            style={serif}
-            className="max-w-lg text-5xl leading-[1.05] font-medium tracking-tight sm:text-6xl"
-          >
-            One Tesla. Two trips. A fair split.
-          </h1>
-          <p className="mt-6 max-w-md text-[#A79C89] sm:text-lg">
-            Jashim's three-seat Bullet is idling on Banani Road. Nusrat needs
-            Mohakhali, Rafiq needs Gulshan 1 — close enough to share, cheap
-            enough to matter.
-          </p>
-          <div className="mt-9 flex flex-wrap items-center gap-4">
-            <Link
-              to="/register"
-              className="rounded-md bg-[#E8A33D] px-6 py-3 text-sm font-medium text-[#14110D] transition-colors hover:bg-[#F2B85A]"
-            >
-              Request a ride
-            </Link>
-            <Link
-              to="/register"
-              className="text-sm text-[#F3ECDF] underline decoration-[#A79C89]/40 underline-offset-4 transition-colors hover:decoration-[#F3ECDF]"
-            >
-              Drive with us instead
-            </Link>
-          </div>
-        </div>
-
-        {/* Ticket stub */}
-        <div className="rounded-2xl bg-[#1E1912] p-6 shadow-2xl shadow-black/40">
-          <div className="flex items-center justify-between text-xs text-[#A79C89]">
-            <span>BULLET</span>
-            <span>3-SEAT TESLA</span>
+      <section className="mx-auto max-w-6xl px-6 py-16 sm:py-24">
+        <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+          <div>
+            <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+              Share the ride. Split the fare.
+            </h1>
+            <p className="mt-5 max-w-md text-lg text-neutral-600">
+              Dhaka Tesla Pool matches you with riders headed your way, so you
+              get a shared ride at a fraction of the cost — without the wait of
+              public transit.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                to="/register"
+                className="rounded-lg bg-emerald-700 px-6 py-3 text-sm font-medium text-white hover:bg-emerald-800"
+              >
+                Request a ride
+              </Link>
+              <Link
+                to="/register"
+                className="rounded-lg border border-neutral-300 px-6 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+              >
+                Drive with us
+              </Link>
+            </div>
           </div>
 
-          <div className="mt-4 space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="relative">
+            <img
+              src="https://images.unsplash.com/photo-1761579340221-e50ba39c3e57?fm=jpg&q=80&w=1200&auto=format&fit=crop"
+              alt="City street at night with car lights"
+              className="h-80 w-full rounded-2xl object-cover sm:h-96"
+            />
+            <div className="absolute -bottom-6 left-6 flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-lg shadow-black/10">
+              <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
               <div>
-                <p className="text-sm text-[#A79C89]">Nusrat</p>
-                <p style={serif} className="text-lg">
-                  Banani → Mohakhali
-                </p>
+                <p className="text-sm font-semibold">4.8 rider rating</p>
+                <p className="text-xs text-neutral-500">from 12,000+ reviews</p>
               </div>
-              <span className="h-2.5 w-2.5 rounded-full bg-[#E8A33D]" />
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[#A79C89]">Rafiq</p>
-                <p style={serif} className="text-lg">
-                  Banani → Gulshan 1
-                </p>
-              </div>
-              <span className="h-2.5 w-2.5 rounded-full bg-[#E8A33D]" />
-            </div>
-            <div className="flex items-center justify-between opacity-70">
-              <p className="text-sm text-[#A79C89]">1 seat open</p>
-              <span className="seat-live h-2.5 w-2.5 rounded-full border border-[#3FA793]" />
-            </div>
-          </div>
-
-          <div className="perforated my-5 h-px" />
-
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-[#A79C89]">Nusrat's fare</span>
-            <span className="font-medium">৳52</span>
-          </div>
-          <div className="mt-1 flex items-center justify-between text-sm">
-            <span className="text-[#A79C89]">Rafiq's fare</span>
-            <span className="font-medium">৳56</span>
           </div>
         </div>
       </section>
 
-      {/* Timeline */}
-      <section className="border-y border-white/[0.06] bg-[#1E1912]/40">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <h2 style={serif} className="text-2xl font-medium">
-            How the rush hour plays out
-          </h2>
-          <div className="mt-10 grid gap-8 sm:grid-cols-4">
-            {TIMELINE.map(({ time, text }, i) => (
-              <div key={time} className="relative pl-5">
-                <span className="absolute left-0 top-1.5 h-2 w-2 rounded-full bg-[#E8A33D]" />
-                {i < TIMELINE.length - 1 && (
-                  <span className="absolute left-[3.5px] top-4 hidden h-[calc(100%+2rem)] w-px bg-white/[0.08] sm:block" />
-                )}
-                <p className="text-sm text-[#E8A33D]">{time}</p>
-                <p className="mt-1.5 text-sm text-[#A79C89]">{text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Roles */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <h2 style={serif} className="text-2xl font-medium">
-          One trip, three roles
-        </h2>
-        <div className="relative mt-12 grid gap-10 sm:grid-cols-3">
-          <div className="absolute top-2 left-0 right-0 hidden h-px bg-white/[0.08] sm:block" />
-          {ROLES.map((role) => (
-            <div key={role.name} className="relative pt-8">
-              <span className="absolute top-0 left-0 h-2.5 w-2.5 rounded-full bg-[#E8A33D]" />
-              <h3 style={serif} className="text-lg">
-                {role.name}
-              </h3>
-              <p className="mt-2 text-sm text-[#A79C89]">{role.detail}</p>
+      {/* Stats */}
+      <section className="border-y border-neutral-100 bg-neutral-50">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-6 py-12 sm:grid-cols-4">
+          {STATS.map((s) => (
+            <div key={s.label} className="text-center">
+              <p className="text-3xl font-semibold text-emerald-700">
+                {s.value}
+              </p>
+              <p className="mt-1 text-sm text-neutral-600">{s.label}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Receipt */}
-      <section className="border-t border-white/[0.06] bg-[#1E1912]/40">
-        <div className="mx-auto max-w-md px-6 py-20">
-          <h2 style={serif} className="text-2xl font-medium">
-            Nusrat's fare, itemized
-          </h2>
-          <div className="mt-8 rounded-2xl bg-[#1E1912] p-6 font-mono text-sm">
-            <div className="flex justify-between">
-              <span className="text-[#A79C89]">Base fare</span>
-              <span>৳20</span>
+      {/* How it works */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          How pooling works
+        </h2>
+        <div className="mt-10 grid gap-10 sm:grid-cols-3">
+          {STEPS.map((step, i) => (
+            <div key={step.title}>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-700 text-sm font-semibold text-white">
+                {i + 1}
+              </span>
+              <h3 className="mt-4 font-semibold">{step.title}</h3>
+              <p className="mt-2 text-sm text-neutral-600">{step.text}</p>
             </div>
-            <div className="mt-2 flex justify-between">
-              <span className="text-[#A79C89]">Distance charge</span>
-              <span>৳45</span>
-            </div>
-            <div className="mt-2 flex justify-between text-[#3FA793]">
-              <span>Pool discount</span>
-              <span>−৳13</span>
-            </div>
-            <div className="perforated my-4 h-px" />
-            <div className="flex justify-between text-base">
-              <span>Total</span>
-              <span>৳52</span>
+          ))}
+        </div>
+      </section>
+
+      {/* Features + photo */}
+      <section className="bg-neutral-50">
+        <div className="mx-auto grid max-w-6xl gap-12 px-6 py-20 lg:grid-cols-2 lg:items-center">
+          <img
+            src="https://images.unsplash.com/photo-1624543349832-2e70c917cc12?fm=jpg&q=80&w=1200&auto=format&fit=crop"
+            alt="Commuters on a city street"
+            className="h-80 w-full rounded-2xl object-cover order-2 lg:order-1"
+          />
+          <div className="order-1 lg:order-2">
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              Built for the daily commute
+            </h2>
+            <div className="mt-8 space-y-6">
+              {FEATURES.map(({ icon: Icon, title, text }) => (
+                <div key={title} className="flex gap-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-700/10 text-emerald-700">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h3 className="font-semibold">{title}</h3>
+                    <p className="mt-1 text-sm text-neutral-600">{text}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer CTA */}
-      <section>
-        <div className="mx-auto max-w-6xl px-6 py-20 text-center">
-          <h2 style={serif} className="text-3xl font-medium">
-            Ready when Jashim is.
+      {/* Testimonials */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          What riders say
+        </h2>
+        <div className="mt-10 grid gap-6 sm:grid-cols-3">
+          {TESTIMONIALS.map((t) => (
+            <div
+              key={t.name}
+              className="rounded-2xl border border-neutral-100 p-6"
+            >
+              <p className="text-sm text-neutral-700">"{t.quote}"</p>
+              <div className="mt-5 flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-700 text-xs font-semibold text-white">
+                  {t.initials}
+                </span>
+                <div>
+                  <p className="text-sm font-medium">{t.name}</p>
+                  <p className="text-xs text-neutral-500">{t.role}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA footer */}
+      <section className="bg-emerald-700">
+        <div className="mx-auto max-w-4xl px-6 py-16 text-center text-white">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            Ready for a cheaper commute?
           </h2>
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/register"
-              className="rounded-md bg-[#E8A33D] px-6 py-3 text-sm font-medium text-[#14110D] transition-colors hover:bg-[#F2B85A]"
+              className="rounded-lg bg-white px-6 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
             >
               Create account
             </Link>
             <Link
               to="/login"
-              className="text-sm text-[#F3ECDF] underline decoration-[#A79C89]/40 underline-offset-4 transition-colors hover:decoration-[#F3ECDF]"
+              className="rounded-lg border border-white/30 px-6 py-3 text-sm font-medium text-white hover:bg-white/10"
             >
               Sign in
             </Link>
           </div>
-          <p className="mt-16 text-xs text-[#A79C89]">
-            Built with React, Node.js, PostgreSQL, Socket.IO, and Docker.
-          </p>
         </div>
       </section>
+
+      <footer className="px-6 py-8 text-center text-xs text-neutral-500">
+        © {new Date().getFullYear()} Dhaka Tesla Pool. All rights reserved.
+      </footer>
     </div>
   );
 }
