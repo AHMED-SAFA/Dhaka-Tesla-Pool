@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
-import { api } from '../api.js';
-import RideMap from './RideMap.jsx';
+import { useEffect, useState } from "react";
+import { api } from "../api.js";
+import RideMap from "./RideMap.jsx";
+import { Card, StatusBadge } from "./ui.jsx";
 
-export default function DriverDashboard({ user }) {
+export default function DriverDashboard({ user, section = "overview" }) {
   const [tesla, setTesla] = useState(null);
   const [activeRide, setActiveRide] = useState(null);
   const [queue, setQueue] = useState({ requests: [], remainingSeats: 3 });
@@ -11,40 +12,38 @@ export default function DriverDashboard({ user }) {
   const [transitioning, setTransitioning] = useState(false);
   const [acceptingId, setAcceptingId] = useState(null);
 
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [history, setHistory] = useState([]);
 
-  // Load Tesla profile
   const fetchTesla = async () => {
     try {
-      const data = await api('/api/drivers/tesla', { auth: true });
+      const data = await api("/api/drivers/tesla", { auth: true });
       setTesla(data.tesla);
     } catch (e) {
-      console.error('Failed to load Tesla', e);
+      console.error("Failed to load Tesla Profile", e);
     }
   };
 
-  // Load Active Ride & Available Queue
   const fetchRideAndQueue = async () => {
     try {
       const [rideData, queueData] = await Promise.all([
-        api('/api/drivers/active-ride', { auth: true }),
-        api('/api/drivers/available-requests', { auth: true }),
+        api("/api/drivers/active-ride", { auth: true }),
+        api("/api/drivers/available-requests", { auth: true }),
       ]);
       setActiveRide(rideData.activeRide);
       setQueue(queueData);
     } catch (e) {
-      console.error('Polling error', e);
+      console.error("Polling error", e);
     }
   };
 
   const fetchHistory = async () => {
     try {
-      const data = await api('/api/drivers/history', { auth: true });
+      const data = await api("/api/drivers/history", { auth: true });
       setHistory(data.history || []);
     } catch (e) {
-      console.error('Failed to fetch history', e);
+      console.error("Failed to fetch history", e);
     }
   };
 
@@ -52,22 +51,19 @@ export default function DriverDashboard({ user }) {
     fetchTesla();
     fetchRideAndQueue();
     fetchHistory();
-    const interval = setInterval(() => {
-      fetchRideAndQueue();
-    }, 3000);
+    const interval = setInterval(fetchRideAndQueue, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  // Toggle Online / Offline
   async function handleToggleStatus() {
     if (!tesla) return;
     setTogglingStatus(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    const nextStatus = tesla.ops_status === 'online' ? 'offline' : 'online';
+    setErrorMsg("");
+    setSuccessMsg("");
+    const nextStatus = tesla.ops_status === "online" ? "offline" : "online";
     try {
-      const res = await api('/api/drivers/status', {
-        method: 'POST',
+      const res = await api("/api/drivers/status", {
+        method: "POST",
         auth: true,
         body: { status: nextStatus },
       });
@@ -75,41 +71,39 @@ export default function DriverDashboard({ user }) {
       setSuccessMsg(`Status updated: You are now ${nextStatus.toUpperCase()}`);
       await fetchRideAndQueue();
     } catch (e) {
-      setErrorMsg(e.message || 'Failed to update status');
+      setErrorMsg(e.message || "Failed to update status");
     } finally {
       setTogglingStatus(false);
     }
   }
 
-  // Accept a passenger request into the Tesla pool
   async function handleAccept(requestId) {
     setAcceptingId(requestId);
-    setErrorMsg('');
-    setSuccessMsg('');
+    setErrorMsg("");
+    setSuccessMsg("");
     try {
-      const res = await api('/api/drivers/rides/accept', {
-        method: 'POST',
+      const res = await api("/api/drivers/rides/accept", {
+        method: "POST",
         auth: true,
         body: { requestId },
       });
-      setSuccessMsg(res.message || 'Passenger added to pool!');
+      setSuccessMsg(res.message || "Passenger added to pool!");
       await fetchRideAndQueue();
       await fetchTesla();
     } catch (e) {
-      setErrorMsg(e.message || 'Failed to accept ride');
+      setErrorMsg(e.message || "Failed to accept ride");
     } finally {
       setAcceptingId(null);
     }
   }
 
-  // Progress Ride Lifecycle
   async function handleTransition(action) {
     setTransitioning(true);
-    setErrorMsg('');
-    setSuccessMsg('');
+    setErrorMsg("");
+    setSuccessMsg("");
     try {
-      const res = await api('/api/drivers/rides/transition', {
-        method: 'POST',
+      const res = await api("/api/drivers/rides/transition", {
+        method: "POST",
         auth: true,
         body: { action },
       });
@@ -118,7 +112,7 @@ export default function DriverDashboard({ user }) {
       await fetchTesla();
       await fetchHistory();
     } catch (e) {
-      setErrorMsg(e.message || 'Action failed');
+      setErrorMsg(e.message || "Action failed");
     } finally {
       setTransitioning(false);
     }
@@ -131,262 +125,311 @@ export default function DriverDashboard({ user }) {
     : 0;
 
   return (
-    <div className="dashboard-grid">
-      {/* Left Column: Driver & Tesla Control + Active Pool */}
-      <div className="dashboard-col">
-        {errorMsg && <div className="alert">{errorMsg}</div>}
-        {successMsg && <div className="success">{successMsg}</div>}
+    <div className="space-y-6">
+      {errorMsg && (
+        <div className="rounded-lg border border-red-400/20 bg-red-400/5 px-4 py-3 text-sm text-red-400">
+          {errorMsg}
+        </div>
+      )}
+      {successMsg && (
+        <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-4 py-3 text-sm text-emerald-400">
+          {successMsg}
+        </div>
+      )}
 
-        {/* Tesla Vehicle & Status Card */}
-        {tesla && (
-          <div className="card tesla-card">
-            <div className="card-header">
-              <span className="eyebrow">Your Tesla Vehicle</span>
-              <span className={`status-badge status-${tesla.ops_status}`}>
-                {tesla.ops_status.toUpperCase()}
-              </span>
-            </div>
-
-            <div className="tesla-info">
-              <h2>⚡ {tesla.name}</h2>
-              <p className="muted">
-                Fixed Vehicle Capacity: <strong>{tesla.capacity} Seats</strong>
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className={tesla.ops_status === 'online' ? 'ghost' : 'online-btn'}
-              disabled={togglingStatus || tesla.ops_status === 'on_trip'}
-              onClick={handleToggleStatus}
+      {section === "overview" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {tesla && (
+            <Card
+              eyebrow="Your Tesla Vehicle"
+              right={<StatusBadge status={tesla.ops_status} />}
             >
-              {togglingStatus
-                ? 'Updating…'
-                : tesla.ops_status === 'online'
-                ? 'Go Offline'
-                : 'Go Online'}
-            </button>
-            {tesla.ops_status === 'on_trip' && (
-              <p className="note-small">Currently on trip. Complete the ride to change status.</p>
-            )}
-          </div>
-        )}
+              <h2 className="text-lg font-semibold">⚡ {tesla.name}</h2>
+              <p className="mt-1 text-sm text-neutral-400">
+                Fixed vehicle capacity:{" "}
+                <strong className="text-neutral-200">
+                  {tesla.capacity} seats
+                </strong>
+              </p>
+              <button
+                type="button"
+                disabled={togglingStatus || tesla.ops_status === "on_trip"}
+                onClick={handleToggleStatus}
+                className={`mt-5 w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  tesla.ops_status === "online"
+                    ? "border border-white/10 text-neutral-200 hover:border-white/20 hover:bg-white/5"
+                    : "bg-emerald-400 text-neutral-950 hover:bg-emerald-300"
+                }`}
+              >
+                {togglingStatus
+                  ? "Updating…"
+                  : tesla.ops_status === "online"
+                    ? "Go Offline"
+                    : "Go Online"}
+              </button>
+              {tesla.ops_status === "on_trip" && (
+                <p className="mt-2 text-xs text-neutral-500">
+                  Currently on trip. Complete the ride to change status.
+                </p>
+              )}
+            </Card>
+          )}
 
-        {/* Active Pool & Trip Lifecycle Card */}
-        {activeRide ? (
-          <div className="card active-pool-card">
-            <div className="card-header">
-              <span className="eyebrow">Active Pool & Trip</span>
-              <span className={`status-badge status-${activeRide.status}`}>
-                {activeRide.status.toUpperCase()}
+          <Card
+            className="lg:col-span-2"
+            eyebrow="Live Ride Requests"
+            right={
+              <span className="text-xs text-neutral-500">
+                {remainingCapacity} seat(s) available
               </span>
-            </div>
+            }
+          >
+            {tesla?.ops_status === "offline" ? (
+              <p className="text-sm text-neutral-500">
+                You're currently offline. Go online from the Overview tab to see
+                waiting passengers.
+              </p>
+            ) : queue.requests.length === 0 ? (
+              <p className="text-sm text-neutral-500">
+                No waiting ride requests right now. Looking for passengers…
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {queue.requests.map((req) => {
+                  const canFit = req.seats <= remainingCapacity;
+                  return (
+                    <div
+                      key={req.id}
+                      className={`rounded-xl border p-4 ${
+                        req.isCompatible && activeRide
+                          ? "border-emerald-400/20 bg-emerald-400/[0.03]"
+                          : "border-white/5 bg-white/[0.02]"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <strong className="text-sm">
+                          {req.pickup_zone_name} → {req.dropoff_zone_name}
+                        </strong>
+                        {req.isCompatible && activeRide && (
+                          <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-xs text-emerald-400">
+                            Shared route
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-sm text-neutral-400">
+                        <span>
+                          {req.passenger_name} · {req.seats}{" "}
+                          {req.seats > 1 ? "seats" : "seat"}
+                        </span>
+                        <span className="font-medium text-emerald-400">
+                          {(req.estimated_fare_paisa / 100).toFixed(2)} BDT
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-neutral-500">
+                        Joining at {req.pickup_zone_name} (
+                        {Number(req.pickup_lat).toFixed(3)},{" "}
+                        {Number(req.pickup_lng).toFixed(3)})
+                      </div>
+                      <div className="mt-3">
+                        {canFit ? (
+                          <button
+                            type="button"
+                            disabled={acceptingId === req.id}
+                            onClick={() => handleAccept(req.id)}
+                            className="rounded-lg bg-emerald-400 px-4 py-1.5 text-sm font-medium text-neutral-950 transition-colors hover:bg-emerald-300 disabled:opacity-50"
+                          >
+                            {acceptingId === req.id
+                              ? "Accepting…"
+                              : activeRide
+                                ? "+ Add to Pool"
+                                : "Accept Ride"}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-neutral-600">
+                            Exceeds capacity — needs {req.seats} seats,{" "}
+                            {remainingCapacity} left
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
 
-            {/* In-Trip Live Navigation Map */}
-            <div className="driver-map-section" style={{ marginBottom: '16px' }}>
-              <div className="map-title-row">
-                <strong>🗺️ Route Navigation Map</strong>
-                <span className="status-pill pill-completed">
-                  {activeRide.status === 'started'
-                    ? '🚀 In Progress'
-                    : activeRide.status === 'driver_arrived'
-                    ? '📍 Arrived at Pickup'
-                    : '⚡ Heading to Joining Spot'}
+          {activeRide ? (
+            <Card
+              eyebrow="Active Pool & Trip"
+              right={<StatusBadge status={activeRide.status} />}
+              className="lg:col-span-2"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <strong className="text-sm text-neutral-300">
+                  Route Navigation
+                </strong>
+                <span className="text-xs text-neutral-500">
+                  {activeRide.status === "started"
+                    ? "In progress"
+                    : activeRide.status === "driver_arrived"
+                      ? "Arrived at pickup"
+                      : "Heading to joining spot"}
                 </span>
               </div>
               <RideMap
                 mode="driver-navigation"
-                height="300px"
+                height="280px"
                 passengers={activeRide.passengers || []}
                 activeRideStatus={activeRide.status}
               />
-            </div>
 
-            {/* Capacity Meter */}
-            <div className="capacity-meter">
-              <div className="capacity-label">
-                <span>Occupancy</span>
-                <strong>
-                  {activeRide.occupied_seats} / {activeRide.tesla_capacity} Seats Occupied ({remainingCapacity} free)
-                </strong>
-              </div>
-              <div className="meter-bar">
-                <div
-                  className="meter-fill"
-                  style={{
-                    width: `${Math.min(100, (activeRide.occupied_seats / activeRide.tesla_capacity) * 100)}%`,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Passengers currently on board with joining location details */}
-            <h4>Passengers in this Pool ({activeRide.passengers?.length || 0}):</h4>
-            <div className="passenger-pool-list">
-              {activeRide.passengers?.map((p) => (
-                <div key={p.ride_passenger_id} className="pool-passenger-item">
-                  <div className="passenger-name-row">
-                    <strong>👤 {p.passenger_name}</strong>
-                    <span className="badge-seat">{p.seats} seat(s)</span>
-                  </div>
-                  <div className="passenger-route">
-                    <span className="route-from">📍 Joining at: <strong>{p.pickup_zone_name}</strong></span>
-                    <span className="route-arrow">➔</span>
-                    <span className="route-to">🏁 Drop-off: <strong>{p.dropoff_zone_name}</strong></span>
-                  </div>
-                  <div className="passenger-coords muted-small">
-                    Joining spot: Lat {Number(p.pickup_lat).toFixed(4)}, Lng {Number(p.pickup_lng).toFixed(4)}
-                  </div>
-                  <div className="passenger-fare">
-                    Fare: {(p.fare_paisa / 100).toFixed(2)} BDT
-                  </div>
+              <div className="mt-5">
+                <div className="mb-1.5 flex items-center justify-between text-sm">
+                  <span className="text-neutral-400">Occupancy</span>
+                  <strong className="text-neutral-200">
+                    {activeRide.occupied_seats} / {activeRide.tesla_capacity}{" "}
+                    seats · {remainingCapacity} free
+                  </strong>
                 </div>
-              ))}
-            </div>
+                <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                  <div
+                    className="h-full rounded-full bg-emerald-400 transition-all"
+                    style={{
+                      width: `${Math.min(100, (activeRide.occupied_seats / activeRide.tesla_capacity) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
 
-            {/* Lifecycle Transition Buttons */}
-            <div className="lifecycle-actions">
-              {activeRide.status === 'matched' && (
-                <button
-                  type="button"
-                  disabled={transitioning}
-                  onClick={() => handleTransition('arrive')}
-                >
-                  📍 Mark Driver Arrived at Pickup
-                </button>
-              )}
-
-              {activeRide.status === 'driver_arrived' && (
-                <button
-                  type="button"
-                  disabled={transitioning}
-                  onClick={() => handleTransition('start')}
-                >
-                  🚀 Start Trip
-                </button>
-              )}
-
-              {activeRide.status === 'started' && (
-                <button
-                  type="button"
-                  disabled={transitioning}
-                  onClick={() => handleTransition('complete')}
-                >
-                  🏁 Complete Trip & Settle Fares
-                </button>
-              )}
-
-              {['matched', 'driver_arrived'].includes(activeRide.status) && (
-                <button
-                  type="button"
-                  className="danger-btn ghost"
-                  disabled={transitioning}
-                  onClick={() => handleTransition('cancel')}
-                >
-                  Cancel Trip
-                </button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="card empty-pool-card">
-            <span className="eyebrow">Active Pool</span>
-            <p className="muted">No active ride right now. When you accept ride requests, your shared pool will appear here.</p>
-          </div>
-        )}
-      </div>
-
-      {/* Right Column: Available Ride Requests Queue */}
-      <div className="dashboard-col">
-        <div className="card queue-card">
-          <div className="card-header">
-            <span className="eyebrow">Live Ride Requests</span>
-            <span className="capacity-pill">
-              {remainingCapacity} seat(s) available
-            </span>
-          </div>
-          <h2>Available Dhaka Requests</h2>
-
-          {tesla?.ops_status === 'offline' ? (
-            <p className="muted">You are currently offline. Click <strong>"Go Online"</strong> to see waiting passengers and accept rides.</p>
-          ) : queue.requests.length === 0 ? (
-            <div className="empty-queue">
-              <p className="muted">No waiting ride requests at this moment. Looking for passengers...</p>
-            </div>
-          ) : (
-            <div className="queue-list">
-              {queue.requests.map((req) => {
-                const canFit = req.seats <= remainingCapacity;
-                return (
-                  <div key={req.id} className={`queue-item ${req.isCompatible ? 'compatible-border' : ''}`}>
-                    <div className="queue-route-row">
-                      <strong>{req.pickup_zone_name} ➔ {req.dropoff_zone_name}</strong>
-                      {req.isCompatible && activeRide && (
-                        <span className="compatible-badge">✨ Shared Route</span>
-                      )}
-                    </div>
-
-                    <div className="queue-details">
-                      <span>👤 {req.passenger_name} ({req.seats} {req.seats > 1 ? 'seats' : 'seat'})</span>
-                      <span className="fare-tag">{(req.estimated_fare_paisa / 100).toFixed(2)} BDT</span>
-                    </div>
-
-                    <div className="joining-badge-row">
-                      <span className="joining-tag">
-                        📍 Joining at: {req.pickup_zone_name} ({Number(req.pickup_lat).toFixed(3)}, {Number(req.pickup_lng).toFixed(3)})
+              <h4 className="mt-6 mb-3 text-sm font-medium text-neutral-300">
+                Passengers in this pool ({activeRide.passengers?.length || 0})
+              </h4>
+              <div className="space-y-3">
+                {activeRide.passengers?.map((p) => (
+                  <div
+                    key={p.ride_passenger_id}
+                    className="rounded-xl border border-white/5 bg-white/[0.02] p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <strong className="text-sm">{p.passenger_name}</strong>
+                      <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs text-neutral-400">
+                        {p.seats} seat(s)
                       </span>
                     </div>
-
-                    <div className="queue-actions">
-                      {canFit ? (
-                        <button
-                          type="button"
-                          className="btn-accept"
-                          disabled={acceptingId === req.id}
-                          onClick={() => handleAccept(req.id)}
-                        >
-                          {acceptingId === req.id ? 'Accepting…' : activeRide ? '+ Add to Pool' : 'Accept Ride'}
-                        </button>
-                      ) : (
-                        <button type="button" className="btn-disabled" disabled>
-                          Exceeds Capacity (Need {req.seats} seats, {remainingCapacity} left)
-                        </button>
-                      )}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-neutral-400">
+                      <span>
+                        Joining at{" "}
+                        <strong className="text-neutral-200">
+                          {p.pickup_zone_name}
+                        </strong>
+                      </span>
+                      <span className="text-neutral-600">→</span>
+                      <span>
+                        Drop-off{" "}
+                        <strong className="text-neutral-200">
+                          {p.dropoff_zone_name}
+                        </strong>
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs text-neutral-500">
+                      Lat {Number(p.pickup_lat).toFixed(4)}, Lng{" "}
+                      {Number(p.pickup_lng).toFixed(4)}
+                    </div>
+                    <div className="mt-1.5 text-sm font-medium text-emerald-400">
+                      {(p.fare_paisa / 100).toFixed(2)} BDT
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                {activeRide.status === "matched" && (
+                  <button
+                    type="button"
+                    disabled={transitioning}
+                    onClick={() => handleTransition("arrive")}
+                    className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-medium text-neutral-950 transition-colors hover:bg-emerald-300 disabled:opacity-50"
+                  >
+                    Mark Driver Arrived
+                  </button>
+                )}
+                {activeRide.status === "driver_arrived" && (
+                  <button
+                    type="button"
+                    disabled={transitioning}
+                    onClick={() => handleTransition("start")}
+                    className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-medium text-neutral-950 transition-colors hover:bg-emerald-300 disabled:opacity-50"
+                  >
+                    Start Trip
+                  </button>
+                )}
+                {activeRide.status === "started" && (
+                  <button
+                    type="button"
+                    disabled={transitioning}
+                    onClick={() => handleTransition("complete")}
+                    className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-medium text-neutral-950 transition-colors hover:bg-emerald-300 disabled:opacity-50"
+                  >
+                    Complete Trip & Settle Fares
+                  </button>
+                )}
+                {["matched", "driver_arrived"].includes(activeRide.status) && (
+                  <button
+                    type="button"
+                    disabled={transitioning}
+                    onClick={() => handleTransition("cancel")}
+                    className="rounded-lg border border-red-400/20 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-400/5 disabled:opacity-50"
+                  >
+                    Cancel Trip
+                  </button>
+                )}
+              </div>
+            </Card>
+          ) : (
+            <Card eyebrow="Active Pool" className="lg:col-span-2">
+              <p className="text-sm text-neutral-500">
+                No active ride right now. When you accept ride requests, your
+                shared pool will appear here.
+              </p>
+            </Card>
           )}
         </div>
+      )}
 
-        {/* Driver Completed Trips History */}
-        <div className="card history-card" style={{ marginTop: '20px' }}>
-          <span className="eyebrow">Driver Trip History</span>
-          <h2>Completed Trips</h2>
+      {section === "history" && (
+        <Card eyebrow="Driver Trip History">
           {history.length === 0 ? (
-            <p className="muted">No completed trips yet.</p>
+            <p className="text-sm text-neutral-500">No completed trips yet.</p>
           ) : (
-            <div className="history-list">
+            <div className="space-y-3">
               {history.map((h) => (
-                <div key={h.id} className="history-item">
-                  <div className="history-route">
-                    <strong>{h.tesla_name}</strong>
-                    <span className="status-pill pill-completed">{h.status}</span>
+                <div
+                  key={h.id}
+                  className="rounded-xl border border-white/5 bg-white/[0.02] p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <strong className="text-sm">{h.tesla_name}</strong>
+                    <StatusBadge status={h.status} />
                   </div>
-                  <div className="history-meta">
+                  <div className="mt-1.5 flex items-center justify-between text-sm text-neutral-400">
                     <span>{h.passenger_count} passenger(s)</span>
-                    <span className="history-fare highlight-fare">Earned: {h.total_fare_bdt} BDT</span>
+                    <span className="font-medium text-emerald-400">
+                      Earned {h.total_fare_bdt} BDT
+                    </span>
                   </div>
-                  <div className="history-date">
-                    {new Date(h.created_at).toLocaleDateString()} {new Date(h.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className="mt-1 text-xs text-neutral-500">
+                    {new Date(h.created_at).toLocaleDateString()}{" "}
+                    {new Date(h.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      </div>
+        </Card>
+      )}
     </div>
   );
 }
