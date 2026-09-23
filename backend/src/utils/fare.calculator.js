@@ -36,7 +36,7 @@ export const FARE_CONFIG = {
   BASE_FARE_PAISA: 5000,       // 50 BDT
   PER_KM_PAISA: 2500,          // 25 BDT / km
   SEAT_EXTRA_PAISA: 2000,      // 20 BDT per additional seat beyond 1
-  POOL_DISCOUNT_PERCENT: 20,   // 20% discount when pooling
+  POOL_DISCOUNT_PERCENT: 10,   // 10% discount when pooling
 };
 
 /**
