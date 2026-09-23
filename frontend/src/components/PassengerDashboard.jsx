@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import RideMap from "./RideMap.jsx";
 import { Card, StatusBadge } from "./ui.jsx";
@@ -19,6 +19,7 @@ export default function PassengerDashboard({ user, section = "ride" }) {
   const [successMsg, setSuccessMsg] = useState("");
 
   const [history, setHistory] = useState([]);
+  const activeFetchSeq = useRef(0);
 
   const selectedPickupZone = zones.find((z) => z.id === pickupZoneId);
   const selectedDropoffZone = zones.find((z) => z.id === dropoffZoneId);
@@ -40,10 +41,13 @@ export default function PassengerDashboard({ user, section = "ride" }) {
   }, []);
 
   const fetchActive = async () => {
+    const seq = ++activeFetchSeq.current;
     try {
       const data = await api("/api/rides/requests/active", { auth: true });
-      setActiveRide(data.activeRide);
+      if (seq !== activeFetchSeq.current) return;
+      setActiveRide(data.activeRide || null);
     } catch (e) {
+      if (seq !== activeFetchSeq.current) return;
       console.error("Failed to fetch active ride", e);
     }
   };
@@ -142,6 +146,8 @@ export default function PassengerDashboard({ user, section = "ride" }) {
         method: "POST",
         auth: true,
       });
+      activeFetchSeq.current += 1;
+      setActiveRide(null);
       setSuccessMsg("Ride request cancelled.");
       await fetchActive();
       await fetchHistory();

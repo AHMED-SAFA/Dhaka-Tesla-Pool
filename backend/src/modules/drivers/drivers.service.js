@@ -106,7 +106,6 @@ export async function getActiveDriverRide(driverId) {
 
   const ride = rows[0];
 
-  // Fetch passengers on this active ride
   const { rows: passengers } = await query(
     `SELECT
        rp.id AS ride_passenger_id,
@@ -133,10 +132,28 @@ export async function getActiveDriverRide(driverId) {
     [ride.id],
   );
 
+  if (passengers.length === 0 && ride.status !== 'started') {
+    await query(
+      `UPDATE rides
+       SET status = 'cancelled',
+           occupied_seats = 0,
+           cancelled_at = COALESCE(cancelled_at, NOW()),
+           cancel_reason = COALESCE(cancel_reason, 'All passengers cancelled')
+       WHERE id = $1 AND status IN ('matched', 'driver_arrived')`,
+      [ride.id],
+    );
+    await query(
+      `UPDATE teslas SET ops_status = 'online' WHERE id = $1 AND ops_status = 'on_trip'`,
+      [ride.tesla_id],
+    );
+    return null;
+  }
+
   return {
     ...ride,
     passengers,
-    availableSeats: Math.max(0, ride.tesla_capacity - ride.occupied_seats),
+    occupied_seats: passengers.reduce((sum, p) => sum + Number(p.seats), 0),
+    availableSeats: Math.max(0, ride.tesla_capacity - passengers.reduce((sum, p) => sum + Number(p.seats), 0)),
   };
 }
 
@@ -185,6 +202,13 @@ export async function getAvailableRequests(driverId) {
      JOIN zones pz ON pz.id = req.pickup_zone_id
      JOIN zones dz ON dz.id = req.dropoff_zone_id
      WHERE req.status = 'waiting'
+       AND req.cancelled_at IS NULL
+       AND NOT EXISTS (
+         SELECT 1
+         FROM ride_passengers rp
+         WHERE rp.request_id = req.id
+           AND rp.status NOT IN ('cancelled')
+       )
      ORDER BY req.created_at ASC`,
   );
 

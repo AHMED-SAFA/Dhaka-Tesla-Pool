@@ -173,15 +173,14 @@ export async function getActivePassengerRide(passengerId) {
      FROM ride_requests req
      JOIN zones pz ON pz.id = req.pickup_zone_id
      JOIN zones dz ON dz.id = req.dropoff_zone_id
-     LEFT JOIN ride_passengers rp ON rp.request_id = req.id
-     LEFT JOIN rides rd ON rd.id = rp.ride_id
+     LEFT JOIN ride_passengers rp ON rp.request_id = req.id AND rp.status NOT IN ('cancelled')
+     LEFT JOIN rides rd ON rd.id = rp.ride_id AND rd.status NOT IN ('completed', 'cancelled')
      LEFT JOIN teslas t ON t.id = rd.tesla_id
      LEFT JOIN users u ON u.id = rd.driver_id
      WHERE req.passenger_id = $1
-       AND (
-         req.status = 'waiting'
-         OR (req.status = 'matched' AND rd.status NOT IN ('completed', 'cancelled'))
-       )
+       AND req.status IN ('waiting', 'matched')
+       AND req.cancelled_at IS NULL
+       AND (req.status = 'waiting' OR rd.id IS NOT NULL)
      ORDER BY req.created_at DESC
      LIMIT 1`,
     [passengerId],
@@ -206,24 +205,27 @@ export async function cancelRideRequest({ passengerId, requestId }) {
     }
 
     if (req.status === 'cancelled' || req.status === 'completed') {
-      throw new AppError(400, 'INVALID_STATE', `Request is already ${req.status}.`);
+      return { message: 'Ride request cancelled successfully.', requestId: req.id, alreadyCancelled: true };
     }
 
-    // Check if assigned to an active ride
     const { rows: rpRows } = await client.query(
-      `SELECT rp.*, rd.status AS ride_status, rd.id AS ride_id, rd.tesla_id
-       FROM ride_passengers rp
-       JOIN rides rd ON rd.id = rp.ride_id
-       WHERE rp.request_id = $1 FOR UPDATE`,
+      `SELECT * FROM ride_passengers WHERE request_id = $1 FOR UPDATE`,
       [req.id],
     );
-
     const rp = rpRows[0];
-    if (rp && ['started', 'completed'].includes(rp.ride_status)) {
-      throw new AppError(400, 'CANNOT_CANCEL', 'Trip has already started. Cannot cancel now.');
+
+    let ride = null;
+    if (rp) {
+      const { rows: rideRows } = await client.query(
+        `SELECT * FROM rides WHERE id = $1 FOR UPDATE`,
+        [rp.ride_id],
+      );
+      ride = rideRows[0] || null;
+      if (ride && ['started', 'completed'].includes(ride.status)) {
+        throw new AppError(400, 'CANNOT_CANCEL', 'Trip has already started. Cannot cancel now.');
+      }
     }
 
-    // Cancel request
     await client.query(
       `UPDATE ride_requests
        SET status = 'cancelled', cancelled_at = NOW()
@@ -232,52 +234,46 @@ export async function cancelRideRequest({ passengerId, requestId }) {
     );
 
     if (rp) {
-      // Cancel passenger on ride
-      await client.query(
-        `UPDATE ride_passengers SET status = 'cancelled' WHERE id = $1`,
-        [rp.id],
-      );
+      await client.query(`UPDATE ride_passengers SET status = 'cancelled' WHERE id = $1`, [rp.id]);
+    }
 
-      // Decrement occupied seats on ride
-      await client.query(
-        `UPDATE rides
-         SET occupied_seats = GREATEST(0, occupied_seats - $1)
-         WHERE id = $2`,
-        [rp.seats, rp.ride_id],
-      );
-
-      // Check if there are other active passengers on this ride
-      const { rows: otherPassengers } = await client.query(
-        `SELECT COUNT(*) AS count
+    if (ride && !['completed', 'cancelled'].includes(ride.status)) {
+      const { rows: remaining } = await client.query(
+        `SELECT COALESCE(SUM(seats), 0) AS seats
          FROM ride_passengers
-         WHERE ride_id = $1 AND status NOT IN ('cancelled')`,
-        [rp.ride_id],
+         WHERE ride_id = $1 AND status NOT IN ('cancelled', 'completed')`,
+        [ride.id],
       );
+      const occupied = Number(remaining[0]?.seats || 0);
 
-      if (Number(otherPassengers[0]?.count) === 0) {
-        // No passengers left on ride, mark ride cancelled and set tesla online
+      if (occupied === 0) {
         await client.query(
-          `UPDATE rides SET status = 'cancelled', cancelled_at = NOW(), cancel_reason = 'All passengers cancelled'
+          `UPDATE rides
+           SET status = 'cancelled',
+               occupied_seats = 0,
+               cancelled_at = NOW(),
+               cancel_reason = 'All passengers cancelled'
            WHERE id = $1`,
-          [rp.ride_id],
+          [ride.id],
         );
         await client.query(
-          `UPDATE teslas SET ops_status = 'online' WHERE id = $1`,
-          [rp.tesla_id],
+          `UPDATE teslas SET ops_status = 'online' WHERE id = $1 AND ops_status = 'on_trip'`,
+          [ride.tesla_id],
         );
+      } else {
+        await client.query(`UPDATE rides SET occupied_seats = $1 WHERE id = $2`, [occupied, ride.id]);
       }
     }
 
-    // Audit log
     await client.query(
       `INSERT INTO ride_events (
          ride_id, request_id, actor_id, event_type, from_status, to_status, payload
        )
-       VALUES ($1, $2, $3, 'PASSENGER_CANCELLED', $4, 'cancelled', '{}')`,
-      [rp?.ride_id || null, req.id, passengerId, req.status],
+       VALUES ($1, $2, $3, 'PASSENGER_CANCELLED', $4, 'cancelled', '{}'::jsonb)`,
+      [ride?.id || rp?.ride_id || null, req.id, passengerId, req.status],
     );
 
-    return { message: 'Ride request cancelled successfully.' };
+    return { message: 'Ride request cancelled successfully.', requestId: req.id };
   });
 }
 

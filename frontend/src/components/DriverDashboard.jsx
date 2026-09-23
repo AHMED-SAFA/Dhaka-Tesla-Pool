@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import RideMap from "./RideMap.jsx";
 import { Card, StatusBadge } from "./ui.jsx";
@@ -15,6 +15,7 @@ export default function DriverDashboard({ user, section = "overview" }) {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [history, setHistory] = useState([]);
+  const queueFetchSeq = useRef(0);
 
   const fetchTesla = async () => {
     try {
@@ -26,14 +27,20 @@ export default function DriverDashboard({ user, section = "overview" }) {
   };
 
   const fetchRideAndQueue = async () => {
+    const seq = ++queueFetchSeq.current;
     try {
       const [rideData, queueData] = await Promise.all([
         api("/api/drivers/active-ride", { auth: true }),
         api("/api/drivers/available-requests", { auth: true }),
       ]);
-      setActiveRide(rideData.activeRide);
-      setQueue(queueData);
+      if (seq !== queueFetchSeq.current) return;
+      setActiveRide(rideData.activeRide || null);
+      setQueue({
+        ...queueData,
+        requests: queueData.requests || [],
+      });
     } catch (e) {
+      if (seq !== queueFetchSeq.current) return;
       console.error("Polling error", e);
     }
   };
