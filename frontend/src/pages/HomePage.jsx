@@ -6,6 +6,7 @@ import PassengerDashboard from "../components/PassengerDashboard.jsx";
 import DriverDashboard from "../components/DriverDashboard.jsx";
 import Sidebar, { MobileTabs } from "../components/Sidebar.jsx";
 import ProfilePage from "../components/ProfilePage.jsx";
+import LandingPage from "../../src/pages/LandingPage.jsx";
 
 export default function HomePage() {
   const { user, signOut, updateUser, ready } = useAuth();
@@ -30,83 +31,7 @@ export default function HomePage() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-neutral-950 text-neutral-100 selection:bg-emerald-400/20">
-        <header className="sticky top-0 z-20 border-b border-white/5 bg-neutral-950/80 backdrop-blur-md">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-            <a href="/" className="flex items-center gap-2.5 group">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-400 transition-colors group-hover:bg-emerald-400/20">
-                <Zap className="h-4 w-4" strokeWidth={2.5} />
-              </span>
-              <span className="font-semibold tracking-tight">
-                Dhaka Tesla Pool
-              </span>
-              <span className="hidden sm:inline-block rounded-full border border-white/10 px-2.5 py-0.5 text-[11px] text-neutral-400">
-                Pool your Tesla
-              </span>
-            </a>
-            <nav className="flex items-center gap-4">
-              <Link
-                to="/login"
-                className="text-sm text-neutral-300 transition-colors hover:text-white"
-              >
-                Sign in
-              </Link>
-              <Link
-                to="/register"
-                className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-medium text-neutral-950 transition-colors hover:bg-emerald-300"
-              >
-                Create account
-              </Link>
-            </nav>
-          </div>
-        </header>
-
-        <main>
-          <section className="relative overflow-hidden">
-            <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,rgba(52,211,153,0.15),transparent)]" />
-            <div className="mx-auto max-w-3xl px-6 py-24 text-center sm:py-32">
-              <span className="inline-block rounded-full border border-emerald-400/20 bg-emerald-400/5 px-3 py-1 text-xs font-medium tracking-wide text-emerald-400">
-                Share a seat. Split the fare. Survive Dhaka traffic.
-              </span>
-              <h1 className="mt-6 text-4xl font-semibold tracking-tight sm:text-6xl">
-                Dhaka Tesla Pool
-              </h1>
-              <p className="mx-auto mt-6 max-w-xl text-balance text-neutral-400 sm:text-lg">
-                Nusrat wants to get from{" "}
-                <strong className="text-neutral-200">
-                  Banani to Mohakhali
-                </strong>
-                . Rafiq wants to get from{" "}
-                <strong className="text-neutral-200">
-                  Banani to Gulshan 1
-                </strong>
-                . Jashim's <strong className="text-neutral-200">Bullet</strong>{" "}
-                has three seats. Share the Tesla, split the fare fairly, and
-                ride in comfort.
-              </p>
-              <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Link
-                  to="/login"
-                  className="group flex items-center gap-2 rounded-lg bg-emerald-400 px-6 py-3 text-sm font-medium text-neutral-950 transition-colors hover:bg-emerald-300"
-                >
-                  Sign in to Test
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                </Link>
-                <Link
-                  to="/register"
-                  className="rounded-lg border border-white/10 px-6 py-3 text-sm font-medium text-neutral-200 transition-colors hover:border-white/20 hover:bg-white/5"
-                >
-                  Register New User
-                </Link>
-              </div>
-            </div>
-          </section>
-        </main>
-      </div>
-    );
-  }
+  if (!user) return <LandingPage />;
 
   return (
     <div className="flex min-h-screen bg-neutral-950 text-neutral-100">

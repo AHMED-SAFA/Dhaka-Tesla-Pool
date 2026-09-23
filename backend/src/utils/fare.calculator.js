@@ -22,7 +22,10 @@ export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
 
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const km = EARTH_RADIUS_KM * c;
@@ -33,10 +36,11 @@ export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
 
 // Pricing constants in paisa
 export const FARE_CONFIG = {
-  BASE_FARE_PAISA: 5000,       // 50 BDT
-  PER_KM_PAISA: 2500,          // 25 BDT / km
-  SEAT_EXTRA_PAISA: 2000,      // 20 BDT per additional seat beyond 1
-  POOL_DISCOUNT_PERCENT: 10,   // 10% discount when pooling
+  BASE_FARE_PAISA: 5000, // 50 BDT
+  PER_KM_PAISA: 2500, // 25 BDT / km
+  SEAT_EXTRA_PAISA: 2000, // 20 BDT per additional seat beyond 1
+  POOL_DISCOUNT_PERCENT: 10, // 10% discount when pooling
+  MAX_DRIVER_EARNINGS_PER_KM_PAISA: 2500, // Shared ride revenue cap per route km
 };
 
 /**
@@ -56,7 +60,9 @@ export function calculateFare({ distanceKm, seats = 1, isPooled = false }) {
 
   let poolDiscount = 0;
   if (isPooled) {
-    poolDiscount = Math.round((rawFare * FARE_CONFIG.POOL_DISCOUNT_PERCENT) / 100);
+    poolDiscount = Math.round(
+      (rawFare * FARE_CONFIG.POOL_DISCOUNT_PERCENT) / 100,
+    );
   }
 
   const finalFare = rawFare - poolDiscount;
@@ -74,5 +80,62 @@ export function calculateFare({ distanceKm, seats = 1, isPooled = false }) {
     distanceChargeBDT: (distanceCharge / 100).toFixed(2),
     poolDiscountBDT: (poolDiscount / 100).toFixed(2),
     finalFareBDT: (finalFare / 100).toFixed(2),
+  };
+}
+
+export function allocatePooledFare(passengers) {
+  if (!passengers.length) {
+    return {
+      totalSoloFarePaisa: 0,
+      pooledTotalPaisa: 0,
+      maxAllowedPaisa: 0,
+      allocations: [],
+    };
+  }
+
+  const totalSoloFarePaisa = passengers.reduce(
+    (sum, passenger) => sum + passenger.soloFarePaisa,
+    0,
+  );
+  const maxDistanceKm = Math.max(
+    ...passengers.map((passenger) => passenger.distanceKm),
+  );
+  const maxAllowedPaisa =
+    FARE_CONFIG.BASE_FARE_PAISA +
+    Math.round(maxDistanceKm * FARE_CONFIG.MAX_DRIVER_EARNINGS_PER_KM_PAISA);
+  const discountedTotalPaisa = Math.round(
+    (totalSoloFarePaisa * (100 - FARE_CONFIG.POOL_DISCOUNT_PERCENT)) / 100,
+  );
+  const pooledTotalPaisa = Math.min(discountedTotalPaisa, maxAllowedPaisa);
+
+  const exactShares = passengers.map(
+    (passenger) =>
+      (pooledTotalPaisa * passenger.soloFarePaisa) / totalSoloFarePaisa,
+  );
+  const allocations = exactShares.map((share, index) => ({
+    ...passengers[index],
+    pooledFarePaisa: Math.floor(share),
+    remainder: share - Math.floor(share),
+  }));
+  let remainingPaisa =
+    pooledTotalPaisa -
+    allocations.reduce((sum, item) => sum + item.pooledFarePaisa, 0);
+  allocations
+    .sort((left, right) => right.remainder - left.remainder)
+    .forEach((allocation) => {
+      if (remainingPaisa > 0) {
+        allocation.pooledFarePaisa += 1;
+        remainingPaisa -= 1;
+      }
+    });
+
+  return {
+    totalSoloFarePaisa,
+    pooledTotalPaisa,
+    maxAllowedPaisa,
+    allocations: allocations.map(({ remainder, ...allocation }) => ({
+      ...allocation,
+      poolSavingsPaisa: allocation.soloFarePaisa - allocation.pooledFarePaisa,
+    })),
   };
 }

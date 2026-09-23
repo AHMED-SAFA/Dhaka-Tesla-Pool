@@ -1,17 +1,26 @@
-import { query, withTransaction } from '../../db/pool.js';
-import { AppError } from '../../middleware/errorHandler.js';
-import { calculateDistanceKm, calculateFare } from '../../utils/fare.calculator.js';
+import { query, withTransaction } from "../../db/pool.js";
+import { AppError } from "../../middleware/errorHandler.js";
+import {
+  allocatePooledFare,
+  calculateDistanceKm,
+  calculateFare,
+} from "../../utils/fare.calculator.js";
 
 /**
  * Get or create Tesla for driver
  */
 export async function getDriverTesla(driverId) {
-  let { rows } = await query('SELECT * FROM teslas WHERE driver_id = $1', [driverId]);
+  let { rows } = await query("SELECT * FROM teslas WHERE driver_id = $1", [
+    driverId,
+  ]);
   if (!rows[0]) {
     // If not found, create default Tesla
-    const { rows: userRows } = await query('SELECT full_name FROM users WHERE id = $1', [driverId]);
-    const driverName = userRows[0]?.full_name || 'Driver';
-    const teslaName = `${driverName.split(' ')[0]}'s Bullet`;
+    const { rows: userRows } = await query(
+      "SELECT full_name FROM users WHERE id = $1",
+      [driverId],
+    );
+    const driverName = userRows[0]?.full_name || "Driver";
+    const teslaName = `${driverName.split(" ")[0]}'s Bullet`;
 
     const { rows: created } = await query(
       `INSERT INTO teslas (driver_id, name, capacity, ops_status)
@@ -31,8 +40,12 @@ export async function updateDriverTesla(driverId, { name, capacity }) {
   const tesla = await getDriverTesla(driverId);
 
   // Check if currently on trip before changing capacity
-  if (capacity !== undefined && tesla.ops_status === 'on_trip') {
-    throw new AppError(400, 'CANNOT_MODIFY', 'Cannot change capacity while on an active trip.');
+  if (capacity !== undefined && tesla.ops_status === "on_trip") {
+    throw new AppError(
+      400,
+      "CANNOT_MODIFY",
+      "Cannot change capacity while on an active trip.",
+    );
   }
 
   const updates = [];
@@ -50,7 +63,7 @@ export async function updateDriverTesla(driverId, { name, capacity }) {
   if (updates.length === 0) return tesla;
 
   const { rows } = await query(
-    `UPDATE teslas SET ${updates.join(', ')} WHERE driver_id = $1 RETURNING *`,
+    `UPDATE teslas SET ${updates.join(", ")} WHERE driver_id = $1 RETURNING *`,
     values,
   );
   return rows[0];
@@ -62,11 +75,11 @@ export async function updateDriverTesla(driverId, { name, capacity }) {
 export async function updateDriverStatus(driverId, nextStatus) {
   const tesla = await getDriverTesla(driverId);
 
-  if (nextStatus === 'offline' && tesla.ops_status === 'on_trip') {
+  if (nextStatus === "offline" && tesla.ops_status === "on_trip") {
     throw new AppError(
       400,
-      'CANNOT_GO_OFFLINE',
-      'Cannot go offline while on an active trip. Complete or cancel your trip first.',
+      "CANNOT_GO_OFFLINE",
+      "Cannot go offline while on an active trip. Complete or cancel your trip first.",
     );
   }
 
@@ -132,7 +145,7 @@ export async function getActiveDriverRide(driverId) {
     [ride.id],
   );
 
-  if (passengers.length === 0 && ride.status !== 'started') {
+  if (passengers.length === 0 && ride.status !== "started") {
     await query(
       `UPDATE rides
        SET status = 'cancelled',
@@ -153,7 +166,11 @@ export async function getActiveDriverRide(driverId) {
     ...ride,
     passengers,
     occupied_seats: passengers.reduce((sum, p) => sum + Number(p.seats), 0),
-    availableSeats: Math.max(0, ride.tesla_capacity - passengers.reduce((sum, p) => sum + Number(p.seats), 0)),
+    availableSeats: Math.max(
+      0,
+      ride.tesla_capacity -
+        passengers.reduce((sum, p) => sum + Number(p.seats), 0),
+    ),
   };
 }
 
@@ -165,9 +182,9 @@ export async function getAvailableRequests(driverId) {
   const activeRide = await getActiveDriverRide(driverId);
 
   // If driver is offline, return empty list
-  if (tesla.ops_status === 'offline') {
+  if (tesla.ops_status === "offline") {
     return {
-      status: 'offline',
+      status: "offline",
       availableSeats: 0,
       requests: [],
     };
@@ -216,7 +233,8 @@ export async function getAvailableRequests(driverId) {
     const canFit = req.seats <= remainingSeats;
     // Route compatibility: If already has passengers, compatible if sharing pickup zone or nearby
     const isCompatible =
-      activePickupZones.size === 0 || activePickupZones.has(req.pickup_zone_name);
+      activePickupZones.size === 0 ||
+      activePickupZones.has(req.pickup_zone_name);
 
     return {
       ...req,
@@ -249,11 +267,19 @@ export async function acceptRideRequest(driverId, requestId) {
     );
     const tesla = teslaRows[0];
     if (!tesla) {
-      throw new AppError(404, 'NOT_FOUND', 'Tesla vehicle not found for driver.');
+      throw new AppError(
+        404,
+        "NOT_FOUND",
+        "Tesla vehicle not found for driver.",
+      );
     }
 
-    if (tesla.ops_status === 'offline') {
-      throw new AppError(400, 'DRIVER_OFFLINE', 'You must go online before accepting rides.');
+    if (tesla.ops_status === "offline") {
+      throw new AppError(
+        400,
+        "DRIVER_OFFLINE",
+        "You must go online before accepting rides.",
+      );
     }
 
     // 2. Lock and check the ride request
@@ -267,20 +293,15 @@ export async function acceptRideRequest(driverId, requestId) {
     );
     const request = reqRows[0];
     if (!request) {
-      throw new AppError(404, 'NOT_FOUND', 'Ride request not found.');
+      throw new AppError(404, "NOT_FOUND", "Ride request not found.");
     }
-    if (request.status !== 'waiting') {
-      throw new AppError(409, 'REQUEST_TAKEN', 'This ride request is no longer available.');
+    if (request.status !== "waiting") {
+      throw new AppError(
+        409,
+        "REQUEST_TAKEN",
+        "This ride request is no longer available.",
+      );
     }
-
-    // Calculate individual fare
-    const distanceKm = calculateDistanceKm(
-      Number(request.p_lat),
-      Number(request.p_lng),
-      Number(request.d_lat),
-      Number(request.d_lng),
-    );
-    const fareInfo = calculateFare({ distanceKm, seats: request.seats, isPooled: true });
 
     // 3. Check if driver already has an active ride in progress
     const { rows: rideRows } = await client.query(
@@ -298,7 +319,7 @@ export async function acceptRideRequest(driverId, requestId) {
       if (newOccupied > tesla.capacity) {
         throw new AppError(
           409,
-          'CAPACITY_EXCEEDED',
+          "CAPACITY_EXCEEDED",
           `Cannot accept: ${tesla.name} has only ${tesla.capacity - ride.occupied_seats} seats remaining. Requested: ${request.seats}.`,
         );
       }
@@ -314,7 +335,7 @@ export async function acceptRideRequest(driverId, requestId) {
       if (request.seats > tesla.capacity) {
         throw new AppError(
           409,
-          'CAPACITY_EXCEEDED',
+          "CAPACITY_EXCEEDED",
           `Requested seats (${request.seats}) exceed total vehicle capacity (${tesla.capacity}).`,
         );
       }
@@ -329,13 +350,28 @@ export async function acceptRideRequest(driverId, requestId) {
       ride = createdRide[0];
 
       // Set Tesla to on_trip
-      await client.query(`UPDATE teslas SET ops_status = 'on_trip' WHERE id = $1`, [tesla.id]);
+      await client.query(
+        `UPDATE teslas SET ops_status = 'on_trip' WHERE id = $1`,
+        [tesla.id],
+      );
     }
 
-    const pLat = request.pickup_lat !== null && request.pickup_lat !== undefined ? Number(request.pickup_lat) : Number(request.p_lat);
-    const pLng = request.pickup_lng !== null && request.pickup_lng !== undefined ? Number(request.pickup_lng) : Number(request.p_lng);
-    const dLat = request.dropoff_lat !== null && request.dropoff_lat !== undefined ? Number(request.dropoff_lat) : Number(request.d_lat);
-    const dLng = request.dropoff_lng !== null && request.dropoff_lng !== undefined ? Number(request.dropoff_lng) : Number(request.d_lng);
+    const pLat =
+      request.pickup_lat !== null && request.pickup_lat !== undefined
+        ? Number(request.pickup_lat)
+        : Number(request.p_lat);
+    const pLng =
+      request.pickup_lng !== null && request.pickup_lng !== undefined
+        ? Number(request.pickup_lng)
+        : Number(request.p_lng);
+    const dLat =
+      request.dropoff_lat !== null && request.dropoff_lat !== undefined
+        ? Number(request.dropoff_lat)
+        : Number(request.d_lat);
+    const dLng =
+      request.dropoff_lng !== null && request.dropoff_lng !== undefined
+        ? Number(request.dropoff_lng)
+        : Number(request.d_lng);
 
     // 4. Add passenger to ride
     const { rows: insertedPassenger } = await client.query(
@@ -352,12 +388,58 @@ export async function acceptRideRequest(driverId, requestId) {
         request.pickup_zone_id,
         request.dropoff_zone_id,
         request.seats,
-        fareInfo.finalFarePaisa,
+        request.estimated_fare_paisa,
         pLat,
         pLng,
         dLat,
         dLng,
       ],
+    );
+
+    // Recalculate one capped total for the whole pool and redistribute it fairly.
+    const { rows: poolPassengers } = await client.query(
+      `SELECT id, seats, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng
+       FROM ride_passengers WHERE ride_id = $1`,
+      [ride.id],
+    );
+    const poolBreakdown = allocatePooledFare(
+      poolPassengers.map((passenger) => {
+        const distanceKm = calculateDistanceKm(
+          Number(passenger.pickup_lat),
+          Number(passenger.pickup_lng),
+          Number(passenger.dropoff_lat),
+          Number(passenger.dropoff_lng),
+        );
+        const soloFare = calculateFare({
+          distanceKm,
+          seats: passenger.seats,
+          isPooled: false,
+        });
+        return {
+          ...passenger,
+          distanceKm,
+          soloFarePaisa: soloFare.finalFarePaisa,
+        };
+      }),
+    );
+
+    for (const allocation of poolBreakdown.allocations) {
+      await client.query(
+        `UPDATE ride_passengers
+         SET fare_paisa = $1, solo_fare_paisa = $2, pool_savings_paisa = $3
+         WHERE id = $4`,
+        [
+          allocation.pooledFarePaisa,
+          allocation.soloFarePaisa,
+          allocation.poolSavingsPaisa,
+          allocation.id,
+        ],
+      );
+    }
+
+    const { rows: updatedPassenger } = await client.query(
+      "SELECT * FROM ride_passengers WHERE id = $1",
+      [insertedPassenger[0].id],
     );
 
     // 5. Update request status to 'matched'
@@ -380,17 +462,18 @@ export async function acceptRideRequest(driverId, requestId) {
           seats: request.seats,
           occupiedSeats: ride.occupied_seats,
           capacity: tesla.capacity,
-          farePaisa: fareInfo.finalFarePaisa,
+          pooledTotalPaisa: poolBreakdown.pooledTotalPaisa,
+          maxAllowedPaisa: poolBreakdown.maxAllowedPaisa,
         }),
       ],
     );
 
     return {
-      message: 'Request accepted and added to pool.',
+      message: "Request accepted and added to pool.",
       rideId: ride.id,
       occupiedSeats: ride.occupied_seats,
       capacity: tesla.capacity,
-      passenger: insertedPassenger[0],
+      passenger: updatedPassenger[0],
     };
   });
 }
@@ -412,14 +495,18 @@ export async function transitionRide(driverId, { action, reason }) {
 
     const ride = rideRows[0];
     if (!ride) {
-      throw new AppError(404, 'NOT_FOUND', 'No active ride found to update.');
+      throw new AppError(404, "NOT_FOUND", "No active ride found to update.");
     }
 
     const currentStatus = ride.status;
 
-    if (action === 'arrive') {
-      if (currentStatus !== 'matched') {
-        throw new AppError(400, 'INVALID_TRANSITION', `Cannot mark arrived from status '${currentStatus}'.`);
+    if (action === "arrive") {
+      if (currentStatus !== "matched") {
+        throw new AppError(
+          400,
+          "INVALID_TRANSITION",
+          `Cannot mark arrived from status '${currentStatus}'.`,
+        );
       }
       await client.query(
         `UPDATE rides SET status = 'driver_arrived', arrived_at = NOW() WHERE id = $1`,
@@ -430,12 +517,16 @@ export async function transitionRide(driverId, { action, reason }) {
          VALUES ($1, $2, 'DRIVER_ARRIVED', 'matched', 'driver_arrived')`,
         [ride.id, driverId],
       );
-      return { status: 'driver_arrived', message: 'Marked arrived at pickup.' };
+      return { status: "driver_arrived", message: "Marked arrived at pickup." };
     }
 
-    if (action === 'start') {
-      if (currentStatus !== 'driver_arrived') {
-        throw new AppError(400, 'INVALID_TRANSITION', `Cannot start trip from status '${currentStatus}'. Mark arrival first.`);
+    if (action === "start") {
+      if (currentStatus !== "driver_arrived") {
+        throw new AppError(
+          400,
+          "INVALID_TRANSITION",
+          `Cannot start trip from status '${currentStatus}'. Mark arrival first.`,
+        );
       }
       await client.query(
         `UPDATE rides SET status = 'started', started_at = NOW() WHERE id = $1`,
@@ -450,12 +541,16 @@ export async function transitionRide(driverId, { action, reason }) {
          VALUES ($1, $2, 'TRIP_STARTED', 'driver_arrived', 'started')`,
         [ride.id, driverId],
       );
-      return { status: 'started', message: 'Trip has started.' };
+      return { status: "started", message: "Trip has started." };
     }
 
-    if (action === 'complete') {
-      if (currentStatus !== 'started') {
-        throw new AppError(400, 'INVALID_TRANSITION', `Cannot complete trip from status '${currentStatus}'. Trip must be started first.`);
+    if (action === "complete") {
+      if (currentStatus !== "started") {
+        throw new AppError(
+          400,
+          "INVALID_TRANSITION",
+          `Cannot complete trip from status '${currentStatus}'. Trip must be started first.`,
+        );
       }
 
       // Mark ride completed
@@ -519,23 +614,30 @@ export async function transitionRide(driverId, { action, reason }) {
       await client.query(
         `INSERT INTO ride_events (ride_id, actor_id, event_type, from_status, to_status, payload)
          VALUES ($1, $2, 'TRIP_COMPLETED', 'started', 'completed', $3)`,
-        [ride.id, driverId, JSON.stringify({ totalEarnedPaisa, passengersCount: passengers.length })],
+        [
+          ride.id,
+          driverId,
+          JSON.stringify({
+            totalEarnedPaisa,
+            passengersCount: passengers.length,
+          }),
+        ],
       );
 
       return {
-        status: 'completed',
-        message: 'Trip completed successfully!',
+        status: "completed",
+        message: "Trip completed successfully!",
         totalEarnedPaisa,
         totalEarnedBDT: (totalEarnedPaisa / 100).toFixed(2),
       };
     }
 
-    if (action === 'cancel') {
+    if (action === "cancel") {
       await client.query(
         `UPDATE rides
          SET status = 'cancelled', cancelled_at = NOW(), cancel_reason = $1, occupied_seats = 0
          WHERE id = $2`,
-        [reason || 'Driver cancelled', ride.id],
+        [reason || "Driver cancelled", ride.id],
       );
 
       // Return active passengers back to waiting status or cancel
@@ -566,10 +668,13 @@ export async function transitionRide(driverId, { action, reason }) {
         [ride.id, driverId, currentStatus, JSON.stringify({ reason })],
       );
 
-      return { status: 'cancelled', message: 'Trip cancelled. Passengers returned to queue.' };
+      return {
+        status: "cancelled",
+        message: "Trip cancelled. Passengers returned to queue.",
+      };
     }
 
-    throw new AppError(400, 'INVALID_ACTION', `Unknown action: ${action}`);
+    throw new AppError(400, "INVALID_ACTION", `Unknown action: ${action}`);
   });
 }
 

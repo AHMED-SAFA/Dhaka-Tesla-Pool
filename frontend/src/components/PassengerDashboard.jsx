@@ -218,6 +218,13 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                   ).toFixed(2)}{" "}
                   BDT
                 </p>
+                {activeRide.solo_fare_paisa != null && (
+                  <p className="mt-1 text-xs text-emerald-400">
+                    You save{" "}
+                    {((activeRide.pool_savings_paisa || 0) / 100).toFixed(2)} tk
+                    by pooling!
+                  </p>
+                )}
               </div>
             </div>
 
@@ -350,7 +357,7 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                     <div className="flex items-center justify-between text-sm text-neutral-400">
                       <span>Distance: ~{estimate.distanceKm} km</span>
                       <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-xs text-emerald-400">
-                        Pool discount −20%
+                        Pool discount −{estimate.pooledFare.poolDiscountBDT} BDT
                       </span>
                     </div>
                     <div className="mt-2 space-y-1 text-sm text-neutral-400">
@@ -371,6 +378,27 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                       <span className="text-lg font-semibold text-emerald-400">
                         {estimate.estimatedFareBDT} BDT
                       </span>
+                    </div>
+                    <div className="mt-3 rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-sm">
+                      <div className="flex items-center justify-between text-neutral-300">
+                        <span>Solo fare</span>
+                        <span>{estimate.soloFare.finalFareBDT} BDT</span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between font-medium text-emerald-400">
+                        <span>
+                          You save {estimate.poolSavingsBDT} tk by pooling!
+                        </span>
+                        <span>Fairness check</span>
+                      </div>
+                      <p className="mt-1 text-xs text-neutral-500">
+                        Your pooled fare is{" "}
+                        {Math.round(
+                          (estimate.estimatedFarePaisa /
+                            estimate.soloFare.finalFarePaisa) *
+                            100,
+                        )}
+                        % of solo pricing.
+                      </p>
                     </div>
                   </div>
                 )}
@@ -453,6 +481,13 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                       BDT
                     </span>
                   </div>
+                  {item.solo_fare_paisa != null && (
+                    <div className="mt-1 text-xs text-emerald-400">
+                      You save{" "}
+                      {((item.pool_savings_paisa || 0) / 100).toFixed(2)} tk by
+                      pooling!
+                    </div>
+                  )}
                   <div className="mt-1 text-xs text-neutral-500">
                     {new Date(item.created_at).toLocaleTimeString([], {
                       hour: "2-digit",

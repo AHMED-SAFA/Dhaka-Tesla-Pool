@@ -1,14 +1,19 @@
-import { query, withTransaction } from '../../db/pool.js';
-import { AppError } from '../../middleware/errorHandler.js';
-import { calculateDistanceKm, calculateFare } from '../../utils/fare.calculator.js';
+import { query, withTransaction } from "../../db/pool.js";
+import { AppError } from "../../middleware/errorHandler.js";
+import {
+  calculateDistanceKm,
+  calculateFare,
+} from "../../utils/fare.calculator.js";
 
 /**
  * Get zone by ID or throw error
  */
-async function getZoneOrThrow(client, zoneId, label = 'Zone') {
-  const { rows } = await client.query('SELECT * FROM zones WHERE id = $1', [zoneId]);
+async function getZoneOrThrow(client, zoneId, label = "Zone") {
+  const { rows } = await client.query("SELECT * FROM zones WHERE id = $1", [
+    zoneId,
+  ]);
   if (!rows[0]) {
-    throw new AppError(404, 'NOT_FOUND', `${label} not found`);
+    throw new AppError(404, "NOT_FOUND", `${label} not found`);
   }
   return rows[0];
 }
@@ -16,21 +21,32 @@ async function getZoneOrThrow(client, zoneId, label = 'Zone') {
 /**
  * Estimate fare between two zones (optionally using exact coordinates)
  */
-export async function estimateRide({ pickupZoneId, dropoffZoneId, seats, pickupLat, pickupLng, dropoffLat, dropoffLng }) {
-  const pickup = await getZoneOrThrow({ query }, pickupZoneId, 'Pickup zone');
-  const dropoff = await getZoneOrThrow({ query }, dropoffZoneId, 'Dropoff zone');
-
-  const startLat = pickupLat !== undefined ? Number(pickupLat) : Number(pickup.latitude);
-  const startLng = pickupLng !== undefined ? Number(pickupLng) : Number(pickup.longitude);
-  const destLat = dropoffLat !== undefined ? Number(dropoffLat) : Number(dropoff.latitude);
-  const destLng = dropoffLng !== undefined ? Number(dropoffLng) : Number(dropoff.longitude);
-
-  const distanceKm = calculateDistanceKm(
-    startLat,
-    startLng,
-    destLat,
-    destLng,
+export async function estimateRide({
+  pickupZoneId,
+  dropoffZoneId,
+  seats,
+  pickupLat,
+  pickupLng,
+  dropoffLat,
+  dropoffLng,
+}) {
+  const pickup = await getZoneOrThrow({ query }, pickupZoneId, "Pickup zone");
+  const dropoff = await getZoneOrThrow(
+    { query },
+    dropoffZoneId,
+    "Dropoff zone",
   );
+
+  const startLat =
+    pickupLat !== undefined ? Number(pickupLat) : Number(pickup.latitude);
+  const startLng =
+    pickupLng !== undefined ? Number(pickupLng) : Number(pickup.longitude);
+  const destLat =
+    dropoffLat !== undefined ? Number(dropoffLat) : Number(dropoff.latitude);
+  const destLng =
+    dropoffLng !== undefined ? Number(dropoffLng) : Number(dropoff.longitude);
+
+  const distanceKm = calculateDistanceKm(startLat, startLng, destLat, destLng);
 
   const soloFare = calculateFare({ distanceKm, seats, isPooled: false });
   const pooledFare = calculateFare({ distanceKm, seats, isPooled: true });
@@ -46,6 +62,11 @@ export async function estimateRide({ pickupZoneId, dropoffZoneId, seats, pickupL
     dropoffLng: destLng,
     soloFare,
     pooledFare,
+    poolSavingsPaisa: soloFare.finalFarePaisa - pooledFare.finalFarePaisa,
+    poolSavingsBDT: (
+      (soloFare.finalFarePaisa - pooledFare.finalFarePaisa) /
+      100
+    ).toFixed(2),
     estimatedFarePaisa: pooledFare.finalFarePaisa,
     estimatedFareBDT: pooledFare.finalFareBDT,
   };
@@ -75,25 +96,28 @@ export async function createRideRequest({
   if (activeReqs.length > 0) {
     throw new AppError(
       409,
-      'ACTIVE_REQUEST_EXISTS',
-      'You already have an active ride request in progress.',
+      "ACTIVE_REQUEST_EXISTS",
+      "You already have an active ride request in progress.",
     );
   }
 
-  const pickup = await getZoneOrThrow({ query }, pickupZoneId, 'Pickup zone');
-  const dropoff = await getZoneOrThrow({ query }, dropoffZoneId, 'Dropoff zone');
-
-  const startLat = pickupLat !== undefined ? Number(pickupLat) : Number(pickup.latitude);
-  const startLng = pickupLng !== undefined ? Number(pickupLng) : Number(pickup.longitude);
-  const destLat = dropoffLat !== undefined ? Number(dropoffLat) : Number(dropoff.latitude);
-  const destLng = dropoffLng !== undefined ? Number(dropoffLng) : Number(dropoff.longitude);
-
-  const distanceKm = calculateDistanceKm(
-    startLat,
-    startLng,
-    destLat,
-    destLng,
+  const pickup = await getZoneOrThrow({ query }, pickupZoneId, "Pickup zone");
+  const dropoff = await getZoneOrThrow(
+    { query },
+    dropoffZoneId,
+    "Dropoff zone",
   );
+
+  const startLat =
+    pickupLat !== undefined ? Number(pickupLat) : Number(pickup.latitude);
+  const startLng =
+    pickupLng !== undefined ? Number(pickupLng) : Number(pickup.longitude);
+  const destLat =
+    dropoffLat !== undefined ? Number(dropoffLat) : Number(dropoff.latitude);
+  const destLng =
+    dropoffLng !== undefined ? Number(dropoffLng) : Number(dropoff.longitude);
+
+  const distanceKm = calculateDistanceKm(startLat, startLng, destLat, destLng);
 
   // Default estimate reflects pooled pricing
   const fareResult = calculateFare({ distanceKm, seats, isPooled: true });
@@ -101,10 +125,10 @@ export async function createRideRequest({
   const result = await withTransaction(async (client) => {
     const { rows: inserted } = await client.query(
       `INSERT INTO ride_requests (
-         passenger_id, pickup_zone_id, dropoff_zone_id, seats, status, estimated_fare_paisa,
+         passenger_id, pickup_zone_id, dropoff_zone_id, seats, status, estimated_fare_paisa, solo_fare_paisa,
          pickup_lat, pickup_lng, dropoff_lat, dropoff_lng
        )
-       VALUES ($1, $2, $3, $4, 'waiting', $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, 'waiting', $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         passengerId,
@@ -112,6 +136,7 @@ export async function createRideRequest({
         dropoffZoneId,
         seats,
         fareResult.finalFarePaisa,
+        calculateFare({ distanceKm, seats, isPooled: false }).finalFarePaisa,
         startLat,
         startLng,
         destLat,
@@ -127,7 +152,19 @@ export async function createRideRequest({
          request_id, actor_id, event_type, from_status, to_status, payload
        )
        VALUES ($1, $2, 'REQUEST_CREATED', NULL, 'waiting', $3)`,
-      [createdReq.id, passengerId, JSON.stringify({ seats, distanceKm, estimatedFarePaisa: fareResult.finalFarePaisa, startLat, startLng, destLat, destLng })],
+      [
+        createdReq.id,
+        passengerId,
+        JSON.stringify({
+          seats,
+          distanceKm,
+          estimatedFarePaisa: fareResult.finalFarePaisa,
+          startLat,
+          startLng,
+          destLat,
+          destLng,
+        }),
+      ],
     );
 
     return createdReq;
@@ -153,7 +190,8 @@ export async function getActivePassengerRide(passengerId) {
        req.id AS request_id,
        req.seats,
        req.status AS request_status,
-       req.estimated_fare_paisa,
+      req.estimated_fare_paisa,
+      req.solo_fare_paisa,
        req.created_at AS request_created_at,
        COALESCE(req.pickup_lat, pz.latitude) AS pickup_lat,
        COALESCE(req.pickup_lng, pz.longitude) AS pickup_lng,
@@ -161,7 +199,9 @@ export async function getActivePassengerRide(passengerId) {
        COALESCE(req.dropoff_lng, dz.longitude) AS dropoff_lng,
        pz.name AS pickup_zone_name,
        dz.name AS dropoff_zone_name,
-       rp.fare_paisa AS actual_fare_paisa,
+      rp.fare_paisa AS actual_fare_paisa,
+      rp.solo_fare_paisa,
+      rp.pool_savings_paisa,
        rp.status AS passenger_status,
        rd.id AS ride_id,
        rd.status AS ride_status,
@@ -201,11 +241,15 @@ export async function cancelRideRequest({ passengerId, requestId }) {
 
     const req = reqRows[0];
     if (!req) {
-      throw new AppError(404, 'NOT_FOUND', 'Ride request not found.');
+      throw new AppError(404, "NOT_FOUND", "Ride request not found.");
     }
 
-    if (req.status === 'cancelled' || req.status === 'completed') {
-      return { message: 'Ride request cancelled successfully.', requestId: req.id, alreadyCancelled: true };
+    if (req.status === "cancelled" || req.status === "completed") {
+      return {
+        message: "Ride request cancelled successfully.",
+        requestId: req.id,
+        alreadyCancelled: true,
+      };
     }
 
     const { rows: rpRows } = await client.query(
@@ -221,8 +265,12 @@ export async function cancelRideRequest({ passengerId, requestId }) {
         [rp.ride_id],
       );
       ride = rideRows[0] || null;
-      if (ride && ['started', 'completed'].includes(ride.status)) {
-        throw new AppError(400, 'CANNOT_CANCEL', 'Trip has already started. Cannot cancel now.');
+      if (ride && ["started", "completed"].includes(ride.status)) {
+        throw new AppError(
+          400,
+          "CANNOT_CANCEL",
+          "Trip has already started. Cannot cancel now.",
+        );
       }
     }
 
@@ -234,10 +282,13 @@ export async function cancelRideRequest({ passengerId, requestId }) {
     );
 
     if (rp) {
-      await client.query(`UPDATE ride_passengers SET status = 'cancelled' WHERE id = $1`, [rp.id]);
+      await client.query(
+        `UPDATE ride_passengers SET status = 'cancelled' WHERE id = $1`,
+        [rp.id],
+      );
     }
 
-    if (ride && !['completed', 'cancelled'].includes(ride.status)) {
+    if (ride && !["completed", "cancelled"].includes(ride.status)) {
       const { rows: remaining } = await client.query(
         `SELECT COALESCE(SUM(seats), 0) AS seats
          FROM ride_passengers
@@ -261,7 +312,10 @@ export async function cancelRideRequest({ passengerId, requestId }) {
           [ride.tesla_id],
         );
       } else {
-        await client.query(`UPDATE rides SET occupied_seats = $1 WHERE id = $2`, [occupied, ride.id]);
+        await client.query(
+          `UPDATE rides SET occupied_seats = $1 WHERE id = $2`,
+          [occupied, ride.id],
+        );
       }
     }
 
@@ -273,7 +327,10 @@ export async function cancelRideRequest({ passengerId, requestId }) {
       [ride?.id || rp?.ride_id || null, req.id, passengerId, req.status],
     );
 
-    return { message: 'Ride request cancelled successfully.', requestId: req.id };
+    return {
+      message: "Ride request cancelled successfully.",
+      requestId: req.id,
+    };
   });
 }
 
@@ -295,7 +352,9 @@ export async function getPassengerHistory(passengerId) {
        COALESCE(req.dropoff_lng, dz.longitude) AS dropoff_lng,
        pz.name AS pickup_zone_name,
        dz.name AS dropoff_zone_name,
-       rp.fare_paisa AS final_fare_paisa,
+      rp.fare_paisa AS final_fare_paisa,
+      rp.solo_fare_paisa,
+      rp.pool_savings_paisa,
        rd.status AS ride_status,
        rd.started_at,
        rd.completed_at,
