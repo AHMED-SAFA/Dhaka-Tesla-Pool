@@ -1,19 +1,26 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { api } from '../api.js';
-import { Alert, AuthLayout, Field } from '../components/AuthLayout.jsx';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { api } from "../api.js";
+import { Alert, AuthLayout, Field } from "../components/AuthLayout.jsx";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    password: '',
-    role: 'passenger',
+    fullName: "",
+    email: "",
+    phone: "",
+    password: "",
+    role: "passenger",
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const PASSWORD_RULES = [
+    { test: (pw) => pw.length >= 8, label: "At least 8 characters" },
+    { test: (pw) => /[a-zA-Z]/.test(pw), label: "At least one letter" },
+    { test: (pw) => /\d/.test(pw), label: "At least one number" },
+  ];
+  const passwordValid = (pw) => PASSWORD_RULES.every((r) => r.test(pw));
+  const [showPassword, setShowPassword] = useState(false);
 
   function update(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -21,11 +28,11 @@ export default function RegisterPage() {
 
   async function onSubmit(e) {
     e.preventDefault();
-    setError('');
+    setError("");
     setBusy(true);
     try {
-      await api('/api/auth/register', {
-        method: 'POST',
+      await api("/api/auth/register", {
+        method: "POST",
         body: {
           ...form,
           phone: form.phone || undefined,
@@ -52,22 +59,62 @@ export default function RegisterPage() {
       <form onSubmit={onSubmit}>
         <Alert>{error}</Alert>
         <Field label="Full name">
-          <input required value={form.fullName} onChange={(e) => update('fullName', e.target.value)} />
+          <input
+            required
+            value={form.fullName}
+            onChange={(e) => update("fullName", e.target.value)}
+          />
         </Field>
         <Field label="Email">
-          <input type="email" required value={form.email} onChange={(e) => update('email', e.target.value)} />
+          <input
+            type="email"
+            required
+            value={form.email}
+            onChange={(e) => update("email", e.target.value)}
+          />
         </Field>
         <Field label="Phone (optional)">
-          <input placeholder="01XXXXXXXXX" value={form.phone} onChange={(e) => update('phone', e.target.value)} />
+          <input
+            placeholder="01XXXXXXXXX"
+            value={form.phone}
+            onChange={(e) => update("phone", e.target.value)}
+          />
         </Field>
         <Field label="Password">
-          <input
-            type="password"
-            required
-            minLength={8}
-            value={form.password}
-            onChange={(e) => update('password', e.target.value)}
-          />
+          <div className="password-field">
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              value={form.password}
+              onChange={(e) => update("password", e.target.value)}
+              className="password-input"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              tabIndex={-1}
+              className="password-toggle"
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
+          <ul
+            style={{
+              listStyle: "none",
+              margin: "8px 0 0",
+              padding: 0,
+              fontSize: 12,
+            }}
+          >
+            {PASSWORD_RULES.map(({ test, label }) => {
+              const met = test(form.password);
+              return (
+                <li key={label} style={{ color: met ? "#16a34a" : "#94a3b8" }}>
+                  {met ? "✓" : "•"} {label}
+                </li>
+              );
+            })}
+          </ul>
         </Field>
         <fieldset className="roles">
           <legend>I am a</legend>
@@ -75,8 +122,8 @@ export default function RegisterPage() {
             <input
               type="radio"
               name="role"
-              checked={form.role === 'passenger'}
-              onChange={() => update('role', 'passenger')}
+              checked={form.role === "passenger"}
+              onChange={() => update("role", "passenger")}
             />
             Passenger
           </label>
@@ -84,14 +131,14 @@ export default function RegisterPage() {
             <input
               type="radio"
               name="role"
-              checked={form.role === 'driver'}
-              onChange={() => update('role', 'driver')}
+              checked={form.role === "driver"}
+              onChange={() => update("role", "driver")}
             />
             Driver
           </label>
         </fieldset>
         <button type="submit" disabled={busy}>
-          {busy ? 'Creating…' : 'Create account'}
+          {busy ? "Creating…" : "Create account"}
         </button>
       </form>
     </AuthLayout>
