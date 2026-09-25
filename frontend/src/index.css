@@ -210,6 +210,15 @@ button.ghost,
   color: var(--muted);
   text-align: center;
 }
+.demo-credentials {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.demo-credentials p {
+  margin: 0;
+}
 .alert,
 .success {
   padding: 10px 12px;

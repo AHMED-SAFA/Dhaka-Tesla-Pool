@@ -75,6 +75,10 @@ export default function LoginPage() {
           {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>
+      <div className="demo-credentials">
+        <p>Passenger: nusrat@tesla.dhaka / Password123</p>
+        <p>Driver: jashim@tesla.dhaka / Password123</p>
+      </div>
     </AuthLayout>
   );
 }
