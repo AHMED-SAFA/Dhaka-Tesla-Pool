@@ -49,7 +49,7 @@ export default function RegisterPage() {
   return (
     <AuthLayout
       title="Create an account"
-      subtitle="Passengers request rides. Drivers take Bullet (and friends) online."
+      subtitle="Passengers request rides. Drivers drive them."
       footer={
         <p className="footer-link">
           Already registered? <Link to="/login">Sign in</Link>

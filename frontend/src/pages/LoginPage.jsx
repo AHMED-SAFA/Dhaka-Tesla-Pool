@@ -34,7 +34,6 @@ export default function LoginPage() {
   return (
     <AuthLayout
       title="Sign in"
-      subtitle="Verified email required — we will send a new code if you skipped that step."
       footer={
         <p className="footer-link">
           <Link to="/forgot-password">Forgot password?</Link>
