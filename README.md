@@ -105,6 +105,25 @@ The deployed application is available at [dhaka-tesla-pool-sdfe.onrender.com](ht
 
 Deployment secrets and environment-specific settings are configured in the hosting providers and should not be committed to the repository.
 
+### Render backend environment
+
+Set these variables in the Render backend service. Use the connection string copied from the Neon dashboard for `DATABASE_URL`; do not commit real values.
+
+```dotenv
+NODE_ENV=production
+DATABASE_URL=<Neon PostgreSQL connection string>
+JWT_SECRET=<long-random-secret>
+JWT_EXPIRES_IN=7d
+FRONTEND_URL=https://domain.onrender.com
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=<your-email-address>
+SMTP_PASS=<your-gmail-app-password>
+MAIL_FROM=<sender-name-and-email>
+```
+
+`SMTP_*` and `MAIL_FROM` are only needed for email delivery. Render provides `PORT` to the backend automatically; do not hard-code it. The frontend currently calls same-origin `/api` and `/health` paths, so its Render web server must proxy those paths to the backend service. No frontend environment variable is currently read by the app.
+
 ## Architecture
 
 ```mermaid
@@ -357,7 +376,23 @@ Add images later by replacing each HTML comment with an image link, for example 
 
 ### Configure the backend
 
-Create a PostgreSQL database named `dhaka_tesla_pool`, then create `backend/.env` with the database connection string, a strong `JWT_SECRET`, `FRONTEND_URL=http://localhost:5173`, and (for SMTP delivery) `SMTP_USER` and `SMTP_PASS`. Do not commit `.env` or real credentials.
+Create a PostgreSQL database named `dhaka_tesla_pool`, then create `backend/.env` for local development:
+
+```dotenv
+NODE_ENV=development
+PORT=4000
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/dhaka_tesla_pool
+JWT_SECRET=<replace-with-a-local-random-secret>
+JWT_EXPIRES_IN=7d
+FRONTEND_URL=http://localhost:5173
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=<your-email-address>
+SMTP_PASS=<your-gmail-app-password>
+MAIL_FROM="Dhaka Tesla Pool <your-email-address>"
+```
+
+SMTP settings are optional for local development; without them, verification details are available through the development flow. Never commit `.env` or real credentials.
 
 Install dependencies, apply migrations, and start the API:
 
