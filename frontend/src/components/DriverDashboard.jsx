@@ -420,8 +420,15 @@ export default function DriverDashboard({ user, section = "overview" }) {
                   </div>
                   <div className="mt-1.5 flex items-center justify-between text-sm text-neutral-400">
                     <span>{h.passenger_count} passenger(s)</span>
-                    <span className="font-medium text-emerald-400">
-                      Earned {h.total_fare_bdt} BDT
+                    <span
+                      className={`font-medium ${
+                        h.status === "completed"
+                          ? "text-emerald-400"
+                          : "text-neutral-300"
+                      }`}
+                    >
+                      {h.status === "completed" ? "Earned" : "Amount"}{" "}
+                      {h.total_fare_bdt} BDT
                     </span>
                   </div>
                   <div className="mt-1 text-xs text-neutral-500">
