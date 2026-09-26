@@ -93,6 +93,17 @@ Each passenger's final allocated fare and savings versus their solo fare are sto
 | Email | Nodemailer with Gmail SMTP configuration |
 | API protection | Helmet, CORS configuration, and `express-rate-limit` |
 | Local orchestration | Docker Compose |
+| Deployment | Render for the frontend and backend; Neon for hosted PostgreSQL |
+
+## Deployment
+
+The deployed application is available at [dhaka-tesla-pool-sdfe.onrender.com](https://dhaka-tesla-pool-sdfe.onrender.com/).
+
+- **Frontend:** hosted on Render.
+- **Backend API:** hosted on Render.
+- **Database:** PostgreSQL hosted by Neon; the backend connects using its configured database connection string.
+
+Deployment secrets and environment-specific settings are configured in the hosting providers and should not be committed to the repository.
 
 ## Architecture
 
