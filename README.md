@@ -326,43 +326,49 @@ Add images later by replacing each HTML comment with an image link, for example 
 
 ### Landing Page
 
-<!-- Add screenshot: docs/screenshots/landing-page.png -->
+<img width="800" height="800" alt="landing" src="https://github.com/user-attachments/assets/31753019-bf87-4b98-809a-3e1cd6bd0f43" />
 
 *Caption: Public landing page for Dhaka Tesla Pool.*
 
 ### Registration and Email Verification
 
-<!-- Add screenshot: docs/screenshots/registration-verification.png -->
+<img width="1920" height="786" alt="login" src="https://github.com/user-attachments/assets/2d82712d-542a-4742-9334-5943cf89f4fd" />
+
+<img width="1917" height="858" alt="reg" src="https://github.com/user-attachments/assets/fa32925d-3b17-493b-b424-3100b4121c86" />
+
+<img width="662" height="587" alt="verify_code" src="https://github.com/user-attachments/assets/07a6bd69-cb68-4e03-bd7b-abdf1229d3fd" />
+
+<img width="1208" height="586" alt="reset_pass" src="https://github.com/user-attachments/assets/6bb85e60-ba60-434b-a2a8-e283fff74c05" />
+
 
 *Caption: Passenger/driver registration and email verification flow.*
 
 ### Passenger Fare Estimate and Ride Request
 
-<!-- Add screenshot: docs/screenshots/passenger-request.png -->
+<img width="1920" height="876" alt="func1" src="https://github.com/user-attachments/assets/bcbcbea8-0038-4b02-b348-8ede5b78ef7c" />
+
+<img width="1920" height="882" alt="func2" src="https://github.com/user-attachments/assets/21ec333c-5d65-4bf7-9639-348a7119f631" />
+
 
 *Caption: Passenger selects a route, reviews the fare estimate, and requests a ride.*
 
-### Passenger Active Ride
+### Fare Division
 
-<!-- Add screenshot: docs/screenshots/passenger-active-ride.png -->
+<img width="696" height="797" alt="fare_div" src="https://github.com/user-attachments/assets/7e4542c6-2b48-4b7e-9a9f-afbe3cd17de0" />
 
 *Caption: Passenger view of an active request or matched ride, including their fare status.*
 
 ### Driver Dashboard and Available Requests
 
-<!-- Add screenshot: docs/screenshots/driver-requests.png -->
+<img width="957" height="882" alt="pool" src="https://github.com/user-attachments/assets/c7002f9d-eb4d-4fa1-a3ee-bddd3273da96" />
 
 *Caption: Driver availability, vehicle capacity, and requests eligible for acceptance.*
 
-### Driver Active Ride
+### Profile, History
 
-<!-- Add screenshot: docs/screenshots/driver-active-ride.png -->
+<img width="706" height="737" alt="profile" src="https://github.com/user-attachments/assets/0b5fef4f-d589-450b-ab6c-afd3bb923bd2" />
 
-*Caption: Driver manages passengers and advances the ride lifecycle.*
-
-### Profile
-
-<!-- Add screenshot: docs/screenshots/profile.png -->
+<img width="692" height="445" alt="history" src="https://github.com/user-attachments/assets/7671bb0d-3c60-40ee-81eb-4b8ab0f99138" />
 
 *Caption: Signed-in user profile and account details.*
 
