@@ -1,7 +1,266 @@
 import { useEffect, useRef, useState } from "react";
+import {
+  Elements,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import { api } from "../api.js";
 import RideMap from "./RideMap.jsx";
 import { Card, StatusBadge } from "./ui.jsx";
+
+function StripePaymentForm({ payment, onPaid }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (!stripe || !elements || processing) return;
+    setProcessing(true);
+    setError("");
+    try {
+      const result = await stripe.confirmPayment({
+        elements,
+        redirect: "if_required",
+      });
+      if (result.error) throw new Error(result.error.message);
+      if (result.paymentIntent?.status !== "succeeded") {
+        throw new Error("Stripe has not confirmed this payment yet.");
+      }
+      await onPaid({ paymentIntentId: result.paymentIntent.id });
+    } catch (err) {
+      setError(err.message || "Payment could not be completed.");
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+      <PaymentElement />
+      {error && <p className="text-sm text-red-400">{error}</p>}
+      <button
+        type="submit"
+        disabled={!stripe || processing}
+        className="w-full rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-emerald-300 disabled:opacity-50"
+      >
+        {processing ? "Processing payment..." : `Pay ${payment.amountBDT} BDT`}
+      </button>
+    </form>
+  );
+}
+
+function PassengerPayment({ ride, onPaid }) {
+  const [payment, setPayment] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [dummyCard, setDummyCard] = useState({
+    number: "",
+    month: "",
+    year: "",
+    cvc: "",
+  });
+
+  async function startPayment() {
+    setLoading(true);
+    setError("");
+    try {
+      const config = await api("/api/payments/config");
+      const intent = await api("/api/payments/create-intent", {
+        method: "POST",
+        auth: true,
+        body: { ridePassengerId: ride.ride_passenger_id },
+      });
+      if (intent.alreadyPaid) {
+        await onPaid();
+        return;
+      }
+      if (!intent.isDummy && !config.publishableKey) {
+        throw new Error(
+          "Stripe is not fully configured. Please contact support.",
+        );
+      }
+      setPayment({
+        ...intent,
+        stripe: intent.isDummy ? null : loadStripe(config.publishableKey),
+      });
+    } catch (err) {
+      setError(err.message || "Unable to start Stripe checkout.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function confirmPayment(details = {}) {
+    setLoading(true);
+    setError("");
+    try {
+      await api("/api/payments/confirm", {
+        method: "POST",
+        auth: true,
+        body: {
+          paymentId: payment.paymentId,
+          paymentIntentId: details.paymentIntentId,
+          isDummy: Boolean(payment.isDummy),
+        },
+      });
+      setPayment(null);
+      await onPaid();
+    } catch (err) {
+      setError(err.message || "Payment could not be confirmed.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDummyPayment(event) {
+    event.preventDefault();
+    if (!/^\d{16}$/.test(dummyCard.number)) {
+      setError("Enter a 16-digit card number.");
+      return;
+    }
+    if (!/^(0[1-9]|1[0-2])$/.test(dummyCard.month)) {
+      setError("Enter a valid expiry month from 01 to 12.");
+      return;
+    }
+    if (!/^\d{4}$/.test(dummyCard.year) || Number(dummyCard.year) <= 2026) {
+      setError("Expiry year must be later than 2026.");
+      return;
+    }
+    if (!/^\d{4}$/.test(dummyCard.cvc)) {
+      setError("Enter a 4-digit security code.");
+      return;
+    }
+    await confirmPayment();
+  }
+
+  function updateDummyCard(field, value) {
+    setDummyCard((current) => ({ ...current, [field]: value }));
+    setError("");
+  }
+
+  return (
+    <div className="mt-5">
+      {error && (
+        <p className="mb-3 rounded-lg border border-red-400/20 bg-red-400/5 px-3 py-2 text-sm text-red-400">
+          {error}
+        </p>
+      )}
+      {!payment ? (
+        <button
+          type="button"
+          disabled={loading}
+          onClick={startPayment}
+          className="rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-emerald-300 disabled:opacity-50"
+        >
+          {loading ? "Opening Stripe..." : "Pay with Stripe"}
+        </button>
+      ) : payment.isDummy ? (
+        <form onSubmit={handleDummyPayment} className="space-y-4">
+          <p className="text-xs text-amber-300">
+            Simulated payment. Any card details matching the required format are
+            accepted; no card data is sent or stored.
+          </p>
+          <label className="block text-sm text-neutral-300">
+            Card number
+            <input
+              required
+              inputMode="numeric"
+              autoComplete="cc-number"
+              maxLength={16}
+              pattern="[0-9]{16}"
+              value={dummyCard.number}
+              onChange={(event) =>
+                updateDummyCard(
+                  "number",
+                  event.target.value.replace(/\D/g, "").slice(0, 16),
+                )
+              }
+              placeholder="16 digits"
+              className="mt-1.5 w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
+            />
+          </label>
+          <div className="grid grid-cols-3 gap-3">
+            <label className="block text-sm text-neutral-300">
+              Month
+              <input
+                required
+                inputMode="numeric"
+                autoComplete="cc-exp-month"
+                maxLength={2}
+                pattern="0[1-9]|1[0-2]"
+                value={dummyCard.month}
+                onChange={(event) =>
+                  updateDummyCard(
+                    "month",
+                    event.target.value.replace(/\D/g, "").slice(0, 2),
+                  )
+                }
+                placeholder="MM"
+                className="mt-1.5 w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
+              />
+            </label>
+            <label className="block text-sm text-neutral-300">
+              Year
+              <input
+                required
+                inputMode="numeric"
+                autoComplete="cc-exp-year"
+                maxLength={4}
+                pattern="[0-9]{4}"
+                value={dummyCard.year}
+                onChange={(event) =>
+                  updateDummyCard(
+                    "year",
+                    event.target.value.replace(/\D/g, "").slice(0, 4),
+                  )
+                }
+                placeholder="YYYY"
+                className="mt-1.5 w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
+              />
+            </label>
+            <label className="block text-sm text-neutral-300">
+              Security code
+              <input
+                required
+                inputMode="numeric"
+                autoComplete="cc-csc"
+                maxLength={4}
+                pattern="[0-9]{4}"
+                value={dummyCard.cvc}
+                onChange={(event) =>
+                  updateDummyCard(
+                    "cvc",
+                    event.target.value.replace(/\D/g, "").slice(0, 4),
+                  )
+                }
+                placeholder="4 digits"
+                className="mt-1.5 w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
+              />
+            </label>
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-emerald-300 disabled:opacity-50"
+          >
+            {loading ? "Confirming..." : `Pay ${payment.amountBDT} BDT`}
+          </button>
+        </form>
+      ) : (
+        <Elements
+          stripe={payment.stripe}
+          options={{ clientSecret: payment.clientSecret }}
+        >
+          <StripePaymentForm payment={payment} onPaid={confirmPayment} />
+        </Elements>
+      )}
+    </div>
+  );
+}
 
 export default function PassengerDashboard({ user, section = "ride" }) {
   const [zones, setZones] = useState([]);
@@ -171,7 +430,39 @@ export default function PassengerDashboard({ user, section = "ride" }) {
         </div>
       )}
 
+      {activeRide?.ride_status === "completed" &&
+        activeRide.payment_status !== "paid" && (
+          <Card eyebrow="Payment Required">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  Settle your completed ride
+                </h2>
+                <p className="mt-1 text-sm text-neutral-400">
+                  {activeRide.pickup_zone_name} → {activeRide.dropoff_zone_name}
+                </p>
+              </div>
+              <strong className="text-lg font-semibold text-emerald-400">
+                {(
+                  (activeRide.actual_fare_paisa ||
+                    activeRide.estimated_fare_paisa) / 100
+                ).toFixed(2)}{" "}
+                BDT
+              </strong>
+            </div>
+            <PassengerPayment
+              ride={activeRide}
+              onPaid={async () => {
+                setSuccessMsg("Payment completed successfully.");
+                await fetchActive();
+                await fetchHistory();
+              }}
+            />
+          </Card>
+        )}
+
       {section === "ride" &&
+        activeRide?.ride_status !== "completed" &&
         (activeRide ? (
           <Card
             eyebrow="Active Ride Tracker"

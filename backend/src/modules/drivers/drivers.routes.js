@@ -22,5 +22,7 @@ router.get('/available-requests', controller.getAvailableRequests);
 router.post('/rides/accept', validate(acceptRequestSchema), controller.acceptRequest);
 router.post('/rides/transition', validate(transitionSchema), controller.transition);
 router.get('/history', controller.getHistory);
+router.get('/payment-alerts', controller.getPaymentAlerts);
+router.post('/payment-alerts/:id/dismiss', controller.dismissPaymentAlert);
 
 export default router;

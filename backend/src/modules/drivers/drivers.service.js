@@ -95,7 +95,8 @@ export async function updateDriverStatus(driverId, nextStatus) {
  * Get active ride for driver
  */
 export async function getActiveDriverRide(driverId) {
-  const { rows } = await query(
+  // First check for active in-progress ride
+  let { rows } = await query(
     `SELECT
        rd.id,
        rd.tesla_id,
@@ -105,6 +106,7 @@ export async function getActiveDriverRide(driverId) {
        rd.created_at,
        rd.arrived_at,
        rd.started_at,
+       rd.completed_at,
        t.name AS tesla_name,
        t.capacity AS tesla_capacity
      FROM rides rd
@@ -114,6 +116,36 @@ export async function getActiveDriverRide(driverId) {
      LIMIT 1`,
     [driverId],
   );
+
+  // If no active trip, check for recently completed trip with pending payments
+  if (!rows[0]) {
+    const { rows: completedWithPending } = await query(
+      `SELECT
+         rd.id,
+         rd.tesla_id,
+         rd.driver_id,
+         rd.status,
+         rd.occupied_seats,
+         rd.created_at,
+         rd.arrived_at,
+         rd.started_at,
+         rd.completed_at,
+         t.name AS tesla_name,
+         t.capacity AS tesla_capacity
+       FROM rides rd
+       JOIN teslas t ON t.id = rd.tesla_id
+       JOIN ride_passengers rp ON rp.ride_id = rd.id
+       JOIN payments p ON p.ride_passenger_id = rp.id
+       WHERE rd.driver_id = $1
+         AND rd.status = 'completed'
+         AND p.status = 'pending'
+         AND rd.completed_at >= NOW() - INTERVAL '15 minutes'
+       ORDER BY rd.completed_at DESC
+       LIMIT 1`,
+      [driverId],
+    );
+    rows = completedWithPending;
+  }
 
   if (!rows[0]) return null;
 
@@ -134,18 +166,24 @@ export async function getActiveDriverRide(driverId) {
        u.full_name AS passenger_name,
        u.phone AS passenger_phone,
        pz.name AS pickup_zone_name,
-       dz.name AS dropoff_zone_name
+       dz.name AS dropoff_zone_name,
+       p.id AS payment_id,
+       p.status AS payment_status,
+       p.method AS payment_method,
+       p.stripe_payment_intent_id,
+       p.paid_at
      FROM ride_passengers rp
      JOIN ride_requests req ON req.id = rp.request_id
      JOIN users u ON u.id = rp.passenger_id
      JOIN zones pz ON pz.id = rp.pickup_zone_id
      JOIN zones dz ON dz.id = rp.dropoff_zone_id
+     LEFT JOIN payments p ON p.ride_passenger_id = rp.id
      WHERE rp.ride_id = $1 AND rp.status NOT IN ('cancelled')
      ORDER BY rp.created_at ASC`,
     [ride.id],
   );
 
-  if (passengers.length === 0 && ride.status !== "started") {
+  if (passengers.length === 0 && ride.status !== "started" && ride.status !== "completed") {
     await query(
       `UPDATE rides
        SET status = 'cancelled',
@@ -162,15 +200,18 @@ export async function getActiveDriverRide(driverId) {
     return null;
   }
 
+  const occupiedSeats = passengers.reduce((sum, p) => sum + Number(p.seats), 0);
+  const pendingPayments = passengers.filter(
+    (p) => !p.payment_status || p.payment_status === "pending",
+  );
+
   return {
     ...ride,
     passengers,
-    occupied_seats: passengers.reduce((sum, p) => sum + Number(p.seats), 0),
-    availableSeats: Math.max(
-      0,
-      ride.tesla_capacity -
-        passengers.reduce((sum, p) => sum + Number(p.seats), 0),
-    ),
+    occupied_seats: ride.status === 'completed' ? 0 : occupiedSeats,
+    availableSeats: Math.max(0, ride.tesla_capacity - occupiedSeats),
+    hasPendingPayments: pendingPayments.length > 0,
+    pendingPaymentsCount: pendingPayments.length,
   };
 }
 
@@ -565,46 +606,31 @@ export async function transitionRide(driverId, { action, reason }) {
       const { rows: passengers } = await client.query(
         `UPDATE ride_passengers
          SET status = 'completed'
-         WHERE ride_id = $1 AND status = 'in_progress'
+         WHERE ride_id = $1 AND status IN ('in_progress', 'confirmed')
          RETURNING id, request_id, passenger_id, fare_paisa`,
         [ride.id],
       );
 
-      // Mark all requests completed and simulate payment records
-      let totalEarnedPaisa = 0;
+      // Create pending Stripe payment records for passengers to settle
+      let totalFarePaisa = 0;
       for (const p of passengers) {
-        await client.query(
-          `UPDATE ride_requests SET status = 'completed' WHERE id = $1`,
-          [p.request_id],
+        // Create or ensure pending Stripe payment record
+        const { rows: existingPay } = await client.query(
+          `SELECT id FROM payments WHERE ride_passenger_id = $1`,
+          [p.id]
         );
+        if (existingPay.length === 0) {
+          await client.query(
+            `INSERT INTO payments (ride_passenger_id, amount_paisa, method, status, acknowledged_by_driver)
+             VALUES ($1, $2, 'stripe', 'pending', FALSE)`,
+            [p.id, p.fare_paisa],
+          );
+        }
 
-        // Record payment
-        await client.query(
-          `INSERT INTO payments (ride_passenger_id, amount_paisa, method, status)
-           VALUES ($1, $2, 'tesla_pay', 'paid')`,
-          [p.id, p.fare_paisa],
-        );
-
-        // Deduct from passenger wallet
-        await client.query(
-          `UPDATE wallets
-           SET balance_paisa = GREATEST(0, balance_paisa - $1), updated_at = NOW()
-           WHERE user_id = $2`,
-          [p.fare_paisa, p.passenger_id],
-        );
-
-        totalEarnedPaisa += p.fare_paisa;
+        totalFarePaisa += p.fare_paisa;
       }
 
-      // Credit driver wallet
-      await client.query(
-        `UPDATE wallets
-         SET balance_paisa = balance_paisa + $1, updated_at = NOW()
-         WHERE user_id = $2`,
-        [totalEarnedPaisa, driverId],
-      );
-
-      // Reset driver Tesla back to online
+      // Reset driver Tesla back to online so they are ready for new requests
       await client.query(
         `UPDATE teslas SET ops_status = 'online' WHERE id = $1`,
         [ride.tesla_id],
@@ -618,7 +644,7 @@ export async function transitionRide(driverId, { action, reason }) {
           ride.id,
           driverId,
           JSON.stringify({
-            totalEarnedPaisa,
+            totalFarePaisa,
             passengersCount: passengers.length,
           }),
         ],
@@ -626,9 +652,9 @@ export async function transitionRide(driverId, { action, reason }) {
 
       return {
         status: "completed",
-        message: "Trip completed successfully!",
-        totalEarnedPaisa,
-        totalEarnedBDT: (totalEarnedPaisa / 100).toFixed(2),
+        message: "Trip completed! Passengers have been prompted for Stripe payment.",
+        totalEarnedPaisa: totalFarePaisa,
+        totalEarnedBDT: (totalFarePaisa / 100).toFixed(2),
       };
     }
 
@@ -691,10 +717,13 @@ export async function getDriverHistory(driverId) {
        rd.completed_at,
        t.name AS tesla_name,
        COUNT(rp.id) AS passenger_count,
-       COALESCE(SUM(rp.fare_paisa), 0) AS total_fare_paisa
+       COALESCE(SUM(rp.fare_paisa), 0) AS total_fare_paisa,
+       COUNT(CASE WHEN pay.status = 'paid' THEN 1 END) AS paid_passenger_count,
+       COALESCE(SUM(CASE WHEN pay.status = 'paid' THEN pay.amount_paisa ELSE 0 END), 0) AS total_paid_paisa
      FROM rides rd
      JOIN teslas t ON t.id = rd.tesla_id
      LEFT JOIN ride_passengers rp ON rp.ride_id = rd.id
+     LEFT JOIN payments pay ON pay.ride_passenger_id = rp.id
      WHERE rd.driver_id = $1
      GROUP BY rd.id, t.name
      ORDER BY rd.created_at DESC
@@ -702,8 +731,71 @@ export async function getDriverHistory(driverId) {
     [driverId],
   );
 
-  return rows.map((r) => ({
-    ...r,
-    total_fare_bdt: (Number(r.total_fare_paisa) / 100).toFixed(2),
-  }));
+  return rows.map((r) => {
+    const passengerCount = Number(r.passenger_count);
+    const paidCount = Number(r.paid_passenger_count);
+    let paymentStatus = "pending";
+    if (paidCount >= passengerCount && passengerCount > 0) {
+      paymentStatus = "paid";
+    } else if (paidCount > 0) {
+      paymentStatus = "partial";
+    }
+
+    return {
+      ...r,
+      total_fare_bdt: (Number(r.total_fare_paisa) / 100).toFixed(2),
+      total_paid_bdt: (Number(r.total_paid_paisa) / 100).toFixed(2),
+      payment_status: paymentStatus,
+      payment_method: "stripe",
+    };
+  });
+}
+
+/**
+ * Get unacknowledged payment alerts for driver (when passenger pays via Stripe)
+ */
+export async function getDriverPaymentAlerts(driverId) {
+  const { rows } = await query(
+    `SELECT
+       p.id AS payment_id,
+       p.amount_paisa,
+       ROUND(p.amount_paisa / 100.0, 2)::text AS amount_bdt,
+       p.paid_at,
+       p.method,
+       p.stripe_payment_intent_id,
+       u.full_name AS passenger_name,
+       u.phone AS passenger_phone,
+       pz.name AS pickup_zone_name,
+       dz.name AS dropoff_zone_name,
+       rd.id AS ride_id
+     FROM payments p
+     JOIN ride_passengers rp ON rp.id = p.ride_passenger_id
+     JOIN rides rd ON rd.id = rp.ride_id
+     JOIN users u ON u.id = rp.passenger_id
+     JOIN zones pz ON pz.id = rp.pickup_zone_id
+     JOIN zones dz ON dz.id = rp.dropoff_zone_id
+     WHERE rd.driver_id = $1
+       AND p.status = 'paid'
+       AND p.acknowledged_by_driver = FALSE
+     ORDER BY p.paid_at DESC`,
+    [driverId],
+  );
+  return rows;
+}
+
+/**
+ * Driver acknowledges / dismisses payment alert
+ */
+export async function dismissDriverPaymentAlert(driverId, paymentId) {
+  const { rowCount } = await query(
+    `UPDATE payments p
+     SET acknowledged_by_driver = TRUE
+     FROM ride_passengers rp
+     JOIN rides rd ON rd.id = rp.ride_id
+     WHERE p.ride_passenger_id = rp.id
+       AND rd.driver_id = $1
+       AND p.id = $2`,
+    [driverId, paymentId],
+  );
+  return { success: rowCount > 0 };
 }

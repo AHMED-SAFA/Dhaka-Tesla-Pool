@@ -6,6 +6,7 @@ import authRoutes from './modules/auth/auth.routes.js';
 import zonesRoutes from './modules/zones/zones.routes.js';
 import ridesRoutes from './modules/rides/rides.routes.js';
 import driversRoutes from './modules/drivers/drivers.routes.js';
+import paymentsRoutes from './modules/payments/payments.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export function createApp() {
@@ -30,6 +31,7 @@ export function createApp() {
   app.use('/api/zones', zonesRoutes);
   app.use('/api/rides', ridesRoutes);
   app.use('/api/drivers', driversRoutes);
+  app.use('/api/payments', paymentsRoutes);
 
   app.use((req, res) => {
     res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found.' } });

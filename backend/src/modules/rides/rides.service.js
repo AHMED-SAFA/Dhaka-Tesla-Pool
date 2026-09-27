@@ -101,6 +101,22 @@ export async function createRideRequest({
     );
   }
 
+  const { rows: pendingPayments } = await query(
+    `SELECT p.id
+     FROM payments p
+     JOIN ride_passengers rp ON rp.id = p.ride_passenger_id
+     WHERE rp.passenger_id = $1 AND p.status = 'pending'
+     LIMIT 1`,
+    [passengerId],
+  );
+  if (pendingPayments.length > 0) {
+    throw new AppError(
+      409,
+      "PAYMENT_REQUIRED",
+      "Please pay for your completed ride before requesting another ride.",
+    );
+  }
+
   const pickup = await getZoneOrThrow({ query }, pickupZoneId, "Pickup zone");
   const dropoff = await getZoneOrThrow(
     { query },
@@ -184,14 +200,14 @@ export async function createRideRequest({
  * Get current passenger's active ride request or ride
  */
 export async function getActivePassengerRide(passengerId) {
-  // Check for waiting or matched request
+  // Check for waiting or matched request, or completed ride with pending payment
   const { rows } = await query(
     `SELECT
        req.id AS request_id,
        req.seats,
        req.status AS request_status,
-      req.estimated_fare_paisa,
-      req.solo_fare_paisa,
+       req.estimated_fare_paisa,
+       req.solo_fare_paisa,
        req.created_at AS request_created_at,
        COALESCE(req.pickup_lat, pz.latitude) AS pickup_lat,
        COALESCE(req.pickup_lng, pz.longitude) AS pickup_lng,
@@ -199,9 +215,10 @@ export async function getActivePassengerRide(passengerId) {
        COALESCE(req.dropoff_lng, dz.longitude) AS dropoff_lng,
        pz.name AS pickup_zone_name,
        dz.name AS dropoff_zone_name,
-      rp.fare_paisa AS actual_fare_paisa,
-      rp.solo_fare_paisa,
-      rp.pool_savings_paisa,
+       rp.id AS ride_passenger_id,
+       rp.fare_paisa AS actual_fare_paisa,
+       rp.solo_fare_paisa,
+       rp.pool_savings_paisa,
        rp.status AS passenger_status,
        rd.id AS ride_id,
        rd.status AS ride_status,
@@ -209,18 +226,27 @@ export async function getActivePassengerRide(passengerId) {
        t.name AS tesla_name,
        t.capacity AS tesla_capacity,
        u.full_name AS driver_name,
-       u.phone AS driver_phone
+       u.phone AS driver_phone,
+       p.id AS payment_id,
+       p.status AS payment_status,
+       p.method AS payment_method,
+       p.stripe_payment_intent_id,
+       p.stripe_client_secret
      FROM ride_requests req
      JOIN zones pz ON pz.id = req.pickup_zone_id
      JOIN zones dz ON dz.id = req.dropoff_zone_id
      LEFT JOIN ride_passengers rp ON rp.request_id = req.id AND rp.status NOT IN ('cancelled')
-     LEFT JOIN rides rd ON rd.id = rp.ride_id AND rd.status NOT IN ('completed', 'cancelled')
+     LEFT JOIN rides rd ON rd.id = rp.ride_id
+     LEFT JOIN payments p ON p.ride_passenger_id = rp.id
      LEFT JOIN teslas t ON t.id = rd.tesla_id
      LEFT JOIN users u ON u.id = rd.driver_id
      WHERE req.passenger_id = $1
-       AND req.status IN ('waiting', 'matched')
        AND req.cancelled_at IS NULL
-       AND (req.status = 'waiting' OR rd.id IS NOT NULL)
+       AND (
+         req.status = 'waiting'
+         OR (req.status = 'matched' AND rd.status IN ('matched', 'driver_arrived', 'started'))
+         OR (rd.status = 'completed' AND (p.status IS NULL OR p.status = 'pending'))
+       )
      ORDER BY req.created_at DESC
      LIMIT 1`,
     [passengerId],
@@ -352,19 +378,25 @@ export async function getPassengerHistory(passengerId) {
        COALESCE(req.dropoff_lng, dz.longitude) AS dropoff_lng,
        pz.name AS pickup_zone_name,
        dz.name AS dropoff_zone_name,
-      rp.fare_paisa AS final_fare_paisa,
-      rp.solo_fare_paisa,
-      rp.pool_savings_paisa,
+       rp.fare_paisa AS final_fare_paisa,
+       rp.solo_fare_paisa,
+       rp.pool_savings_paisa,
        rd.status AS ride_status,
        rd.started_at,
        rd.completed_at,
        t.name AS tesla_name,
-       u.full_name AS driver_name
+       u.full_name AS driver_name,
+       p.id AS payment_id,
+       p.status AS payment_status,
+       p.method AS payment_method,
+       p.stripe_payment_intent_id,
+       p.paid_at
      FROM ride_requests req
      JOIN zones pz ON pz.id = req.pickup_zone_id
      JOIN zones dz ON dz.id = req.dropoff_zone_id
      LEFT JOIN ride_passengers rp ON rp.request_id = req.id
      LEFT JOIN rides rd ON rd.id = rp.ride_id
+     LEFT JOIN payments p ON p.ride_passenger_id = rp.id
      LEFT JOIN teslas t ON t.id = rd.tesla_id
      LEFT JOIN users u ON u.id = rd.driver_id
      WHERE req.passenger_id = $1

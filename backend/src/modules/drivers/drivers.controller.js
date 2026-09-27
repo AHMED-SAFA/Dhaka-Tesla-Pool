@@ -40,3 +40,13 @@ export const getHistory = asyncHandler(async (req, res) => {
   const result = await service.getDriverHistory(req.user.id);
   res.json({ history: result });
 });
+
+export const getPaymentAlerts = asyncHandler(async (req, res) => {
+  const alerts = await service.getDriverPaymentAlerts(req.user.id);
+  res.json({ alerts });
+});
+
+export const dismissPaymentAlert = asyncHandler(async (req, res) => {
+  const result = await service.dismissDriverPaymentAlert(req.user.id, req.params.id);
+  res.json(result);
+});
