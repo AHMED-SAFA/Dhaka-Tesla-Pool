@@ -33,11 +33,12 @@ export const env = {
     process.env.MAIL_FROM ||
     process.env.SMTP_USER ||
     "Dhaka Tesla Pool <noreply@localhost>",
-  stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
-  stripePublishableKey:
+  stripeSecretKey: (process.env.STRIPE_SECRET_KEY || "").trim(),
+  stripePublishableKey: (
     process.env.STRIPE_PUBLISHABLE_KEY ||
     process.env.VITE_STRIPE_PUBLISHABLE_KEY ||
-    "",
+    ""
+  ).trim(),
   stripeDummyMode: process.env.STRIPE_DUMMY_MODE === "true",
 };
 

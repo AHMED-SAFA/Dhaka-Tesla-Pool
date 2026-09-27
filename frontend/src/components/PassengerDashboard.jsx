@@ -747,46 +747,85 @@ export default function PassengerDashboard({ user, section = "ride" }) {
             <p className="text-sm text-neutral-500">No past rides yet.</p>
           ) : (
             <div className="space-y-3">
-              {history.map((item) => (
-                <div
-                  key={item.request_id}
-                  className="rounded-xl border border-white/5 bg-white/[0.02] p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <strong className="text-sm">
-                      {item.pickup_zone_name} → {item.dropoff_zone_name}
-                    </strong>
-                    <StatusBadge
-                      status={item.ride_status || item.request_status}
-                    />
-                  </div>
-                  <div className="mt-1.5 flex items-center justify-between text-sm text-neutral-400">
-                    <span>
-                      {item.seats} seat(s) · {item.tesla_name || "Tesla"}
-                    </span>
-                    <span className="font-medium text-emerald-400">
-                      {(
-                        (item.final_fare_paisa || item.estimated_fare_paisa) /
-                        100
-                      ).toFixed(2)}{" "}
-                      BDT
-                    </span>
-                  </div>
-                  {item.solo_fare_paisa != null && (
-                    <div className="mt-1 text-xs text-emerald-400">
-                      You save{" "}
-                      {((item.pool_savings_paisa || 0) / 100).toFixed(2)} tk by
-                      pooling!
+              {history.map((item) => {
+                const isCompleted =
+                  item.ride_status === "completed" ||
+                  item.request_status === "completed";
+                const isPaid = item.payment_status === "paid";
+                const paymentDue = isCompleted && !isPaid;
+
+                return (
+                  <div
+                    key={item.request_id}
+                    className={`rounded-xl border p-4 ${
+                      paymentDue
+                        ? "border-amber-400/20 bg-amber-400/[0.03]"
+                        : "border-white/5 bg-white/[0.02]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <strong className="text-sm">
+                        {item.pickup_zone_name} → {item.dropoff_zone_name}
+                      </strong>
+                      <div className="flex items-center gap-2">
+                        {paymentDue ? (
+                          <span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-xs font-medium tracking-wide text-amber-400">
+                            PAYMENT DUE
+                          </span>
+                        ) : isPaid ? (
+                          <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-medium tracking-wide text-emerald-400">
+                            PAID
+                          </span>
+                        ) : (
+                          <StatusBadge
+                            status={item.ride_status || item.request_status}
+                          />
+                        )}
+                      </div>
                     </div>
-                  )}
-                  <div className="mt-1 text-xs text-neutral-500">
-                    {new Date(item.created_at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    <div className="mt-1.5 flex items-center justify-between text-sm text-neutral-400">
+                      <span>
+                        {item.seats} seat(s) · {item.tesla_name || "Tesla"}
+                      </span>
+                      <span
+                        className={`font-medium ${
+                          paymentDue ? "text-amber-400" : "text-emerald-400"
+                        }`}
+                      >
+                        {paymentDue ? "Due: " : ""}
+                        {(
+                          (item.final_fare_paisa || item.estimated_fare_paisa) /
+                          100
+                        ).toFixed(2)}{" "}
+                        BDT
+                      </span>
+                    </div>
+                    {item.solo_fare_paisa != null && (
+                      <div className="mt-1 text-xs text-emerald-400">
+                        You save{" "}
+                        {((item.pool_savings_paisa || 0) / 100).toFixed(2)} tk by
+                        pooling!
+                      </div>
+                    )}
+                    {isPaid && item.paid_at && (
+                      <div className="mt-1 text-xs text-neutral-500">
+                        Paid on{" "}
+                        {new Date(item.paid_at).toLocaleDateString()}{" "}
+                        {new Date(item.paid_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    )}
+                    <div className="mt-1 text-xs text-neutral-500">
+                      {new Date(item.created_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>

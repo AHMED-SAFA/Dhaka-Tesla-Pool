@@ -409,37 +409,66 @@ export default function DriverDashboard({ user, section = "overview" }) {
             <p className="text-sm text-neutral-500">No completed trips yet.</p>
           ) : (
             <div className="space-y-3">
-              {history.map((h) => (
-                <div
-                  key={h.id}
-                  className="rounded-xl border border-white/5 bg-white/[0.02] p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <strong className="text-sm">{h.tesla_name}</strong>
-                    <StatusBadge status={h.status} />
+              {history.map((h) => {
+                const allPaid = h.payment_status === "paid";
+                const somePaid = h.payment_status === "partial";
+                const isCompleted = h.status === "completed";
+                const paymentDue = isCompleted && !allPaid;
+
+                return (
+                  <div
+                    key={h.id}
+                    className={`rounded-xl border p-4 ${
+                      paymentDue && !somePaid
+                        ? "border-amber-400/20 bg-amber-400/[0.03]"
+                        : "border-white/5 bg-white/[0.02]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <strong className="text-sm">{h.tesla_name}</strong>
+                      <div className="flex items-center gap-2">
+                        {allPaid && isCompleted ? (
+                          <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-medium tracking-wide text-emerald-400">
+                            EARNED
+                          </span>
+                        ) : paymentDue ? (
+                          <span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-xs font-medium tracking-wide text-amber-400">
+                            {somePaid ? "PARTIAL PAYMENT" : "PAYMENT DUE"}
+                          </span>
+                        ) : (
+                          <StatusBadge status={h.status} />
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between text-sm text-neutral-400">
+                      <span>{h.passenger_count} passenger(s)</span>
+                      <span
+                        className={`font-medium ${
+                          allPaid && isCompleted
+                            ? "text-emerald-400"
+                            : paymentDue
+                              ? "text-amber-400"
+                              : "text-neutral-300"
+                        }`}
+                      >
+                        {allPaid && isCompleted
+                          ? "Earned"
+                          : paymentDue
+                            ? "Due"
+                            : "Amount"}{" "}
+                        {allPaid ? h.total_paid_bdt : h.total_fare_bdt} BDT
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs text-neutral-500">
+                      {new Date(h.created_at).toLocaleDateString()}{" "}
+                      {new Date(h.created_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
                   </div>
-                  <div className="mt-1.5 flex items-center justify-between text-sm text-neutral-400">
-                    <span>{h.passenger_count} passenger(s)</span>
-                    <span
-                      className={`font-medium ${
-                        h.status === "completed"
-                          ? "text-emerald-400"
-                          : "text-neutral-300"
-                      }`}
-                    >
-                      {h.status === "completed" ? "Earned" : "Amount"}{" "}
-                      {h.total_fare_bdt} BDT
-                    </span>
-                  </div>
-                  <div className="mt-1 text-xs text-neutral-500">
-                    {new Date(h.created_at).toLocaleDateString()}{" "}
-                    {new Date(h.created_at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>
