@@ -15,6 +15,7 @@ export default function DriverDashboard({ user, section = "overview" }) {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [history, setHistory] = useState([]);
+  const [feedbackStats, setFeedbackStats] = useState(null);
   const queueFetchSeq = useRef(0);
 
   const fetchTesla = async () => {
@@ -54,10 +55,20 @@ export default function DriverDashboard({ user, section = "overview" }) {
     }
   };
 
+  const fetchFeedbackStats = async () => {
+    try {
+      const data = await api("/api/feedback/driver", { auth: true });
+      setFeedbackStats(data.stats || null);
+    } catch (e) {
+      console.error("Failed to fetch driver feedback stats", e);
+    }
+  };
+
   useEffect(() => {
     fetchTesla();
     fetchRideAndQueue();
     fetchHistory();
+    fetchFeedbackStats();
     const interval = setInterval(fetchRideAndQueue, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -178,6 +189,22 @@ export default function DriverDashboard({ user, section = "overview" }) {
                 <p className="mt-2 text-xs text-neutral-500">
                   Currently on trip. Complete the ride to change status.
                 </p>
+              )}
+              {feedbackStats && (
+                <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-xs">
+                  <div className="flex items-center gap-1.5 text-amber-400">
+                    <span>★</span>
+                    <span className="font-semibold text-neutral-200">
+                      {feedbackStats.avgRating ? `${feedbackStats.avgRating} / 5` : "5.0 / 5"}
+                    </span>
+                    <span className="text-neutral-500">
+                      ({feedbackStats.totalRatings} ratings)
+                    </span>
+                  </div>
+                  <span className={feedbackStats.totalComplaints > 0 ? "text-amber-400" : "text-neutral-500"}>
+                    {feedbackStats.totalComplaints} complaint{feedbackStats.totalComplaints === 1 ? "" : "s"}
+                  </span>
+                </div>
               )}
             </Card>
           )}
@@ -466,6 +493,49 @@ export default function DriverDashboard({ user, section = "overview" }) {
                         minute: "2-digit",
                       })}
                     </div>
+
+                    {/* Passenger Feedback / Ratings & Complaints */}
+                    {h.feedbacks && h.feedbacks.length > 0 && (
+                      <div className="mt-3 border-t border-white/5 pt-2.5 space-y-2">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                          Passenger Reviews ({h.feedbacks.length}):
+                        </span>
+                        {h.feedbacks.map((fb, idx) => (
+                          <div
+                            key={fb.id || idx}
+                            className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5 text-xs"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                {fb.rating ? (
+                                  <span className="font-semibold text-amber-400">
+                                    {"★".repeat(fb.rating)}
+                                    {"☆".repeat(5 - fb.rating)}{" "}
+                                    <span className="text-neutral-400">
+                                      ({fb.rating}/5)
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <span className="text-neutral-500">
+                                    No star rating
+                                  </span>
+                                )}
+                              </div>
+                              {fb.created_at && (
+                                <span className="text-[10px] text-neutral-500">
+                                  {new Date(fb.created_at).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                            {fb.complaint && (
+                              <p className="mt-1.5 rounded border border-white/5 bg-black/25 p-2 text-neutral-300 italic">
+                                “{fb.complaint}”
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}

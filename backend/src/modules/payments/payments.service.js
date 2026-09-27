@@ -240,12 +240,14 @@ export async function confirmPayment({
         rp.passenger_id,
         rd.driver_id,
         u.full_name AS passenger_name,
+        driver.full_name AS driver_name,
         pz.name AS pickup_zone_name,
         dz.name AS dropoff_zone_name
       FROM payments p
       JOIN ride_passengers rp ON rp.id = p.ride_passenger_id
       JOIN rides rd ON rd.id = rp.ride_id
       JOIN users u ON u.id = rp.passenger_id
+      LEFT JOIN users driver ON driver.id = rd.driver_id
       JOIN zones pz ON pz.id = rp.pickup_zone_id
       JOIN zones dz ON dz.id = rp.dropoff_zone_id
       WHERE rp.passenger_id = $1
@@ -379,6 +381,11 @@ export async function confirmPayment({
       message: "Payment completed successfully via Stripe!",
       amountBDT: (payment.amount_paisa / 100).toFixed(2),
       paymentId: payment.id,
+      requestId: payment.request_id,
+      rideId: payment.ride_id,
+      driverName: payment.driver_name,
+      pickupZoneName: payment.pickup_zone_name,
+      dropoffZoneName: payment.dropoff_zone_name,
       transactionId: finalTxId,
       paidAt: new Date().toISOString(),
     };

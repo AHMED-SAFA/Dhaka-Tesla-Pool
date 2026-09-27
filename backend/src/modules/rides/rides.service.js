@@ -231,7 +231,10 @@ export async function getActivePassengerRide(passengerId) {
        p.status AS payment_status,
        p.method AS payment_method,
        p.stripe_payment_intent_id,
-       p.stripe_client_secret
+       p.stripe_client_secret,
+       rf.id AS feedback_id,
+       rf.rating,
+       rf.complaint
      FROM ride_requests req
      JOIN zones pz ON pz.id = req.pickup_zone_id
      JOIN zones dz ON dz.id = req.dropoff_zone_id
@@ -240,6 +243,7 @@ export async function getActivePassengerRide(passengerId) {
      LEFT JOIN payments p ON p.ride_passenger_id = rp.id
      LEFT JOIN teslas t ON t.id = rd.tesla_id
      LEFT JOIN users u ON u.id = rd.driver_id
+     LEFT JOIN ride_feedback rf ON rf.request_id = req.id AND rf.submitted_by = req.passenger_id
      WHERE req.passenger_id = $1
        AND req.cancelled_at IS NULL
        AND (
@@ -390,7 +394,12 @@ export async function getPassengerHistory(passengerId) {
        p.status AS payment_status,
        p.method AS payment_method,
        p.stripe_payment_intent_id,
-       p.paid_at
+       p.paid_at,
+       rf.id AS feedback_id,
+       rf.rating,
+       rf.complaint,
+       rf.created_at AS feedback_created_at,
+       rf.updated_at AS feedback_updated_at
      FROM ride_requests req
      JOIN zones pz ON pz.id = req.pickup_zone_id
      JOIN zones dz ON dz.id = req.dropoff_zone_id
@@ -399,6 +408,7 @@ export async function getPassengerHistory(passengerId) {
      LEFT JOIN payments p ON p.ride_passenger_id = rp.id
      LEFT JOIN teslas t ON t.id = rd.tesla_id
      LEFT JOIN users u ON u.id = rd.driver_id
+     LEFT JOIN ride_feedback rf ON rf.request_id = req.id AND rf.submitted_by = req.passenger_id
      WHERE req.passenger_id = $1
      ORDER BY req.created_at DESC
      LIMIT 20`,

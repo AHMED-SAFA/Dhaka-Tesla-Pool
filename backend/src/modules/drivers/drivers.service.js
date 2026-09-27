@@ -716,10 +716,22 @@ export async function getDriverHistory(driverId) {
        rd.started_at,
        rd.completed_at,
        t.name AS tesla_name,
-       COUNT(rp.id) AS passenger_count,
+       COUNT(DISTINCT rp.id) AS passenger_count,
        COALESCE(SUM(rp.fare_paisa), 0) AS total_fare_paisa,
-       COUNT(CASE WHEN pay.status = 'paid' THEN 1 END) AS paid_passenger_count,
-       COALESCE(SUM(CASE WHEN pay.status = 'paid' THEN pay.amount_paisa ELSE 0 END), 0) AS total_paid_paisa
+       COUNT(DISTINCT CASE WHEN pay.status = 'paid' THEN pay.id END) AS paid_passenger_count,
+       COALESCE(SUM(CASE WHEN pay.status = 'paid' THEN pay.amount_paisa ELSE 0 END), 0) AS total_paid_paisa,
+       (
+         SELECT JSON_AGG(
+           JSON_BUILD_OBJECT(
+             'id', rf.id,
+             'rating', rf.rating,
+             'complaint', rf.complaint,
+             'created_at', rf.created_at
+           )
+         )
+         FROM ride_feedback rf
+         WHERE rf.ride_id = rd.id AND rf.submitted_by <> rd.driver_id
+       ) AS feedbacks
      FROM rides rd
      JOIN teslas t ON t.id = rd.tesla_id
      LEFT JOIN ride_passengers rp ON rp.ride_id = rd.id
@@ -743,6 +755,7 @@ export async function getDriverHistory(driverId) {
 
     return {
       ...r,
+      feedbacks: r.feedbacks || [],
       total_fare_bdt: (Number(r.total_fare_paisa) / 100).toFixed(2),
       total_paid_bdt: (Number(r.total_paid_paisa) / 100).toFixed(2),
       payment_status: paymentStatus,

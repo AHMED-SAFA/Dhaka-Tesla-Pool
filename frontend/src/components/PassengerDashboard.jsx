@@ -9,6 +9,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { api } from "../api.js";
 import RideMap from "./RideMap.jsx";
 import { Card, StatusBadge } from "./ui.jsx";
+import FeedbackModal from "./FeedbackModal.jsx";
 
 function StripePaymentForm({ payment, onPaid }) {
   const stripe = useStripe();
@@ -98,7 +99,7 @@ function PassengerPayment({ ride, onPaid }) {
     setLoading(true);
     setError("");
     try {
-      await api("/api/payments/confirm", {
+      const res = await api("/api/payments/confirm", {
         method: "POST",
         auth: true,
         body: {
@@ -108,7 +109,7 @@ function PassengerPayment({ ride, onPaid }) {
         },
       });
       setPayment(null);
-      await onPaid();
+      await onPaid(res);
     } catch (err) {
       setError(err.message || "Payment could not be confirmed.");
     } finally {
@@ -278,6 +279,7 @@ export default function PassengerDashboard({ user, section = "ride" }) {
   const [successMsg, setSuccessMsg] = useState("");
 
   const [history, setHistory] = useState([]);
+  const [feedbackTarget, setFeedbackTarget] = useState(null);
   const activeFetchSeq = useRef(0);
 
   const selectedPickupZone = zones.find((z) => z.id === pickupZoneId);
@@ -452,8 +454,17 @@ export default function PassengerDashboard({ user, section = "ride" }) {
             </div>
             <PassengerPayment
               ride={activeRide}
-              onPaid={async () => {
+              onPaid={async (res) => {
                 setSuccessMsg("Payment completed successfully.");
+                setFeedbackTarget({
+                  requestId: activeRide.request_id || res?.requestId,
+                  driverName: activeRide.driver_name || res?.driverName,
+                  pickupZoneName: activeRide.pickup_zone_name || res?.pickupZoneName,
+                  dropoffZoneName: activeRide.dropoff_zone_name || res?.dropoffZoneName,
+                  initialRating: activeRide.rating || 0,
+                  initialComplaint: activeRide.complaint || "",
+                  isPostPayment: true,
+                });
                 await fetchActive();
                 await fetchHistory();
               }}
@@ -823,12 +834,138 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                         minute: "2-digit",
                       })}
                     </div>
+
+                    {/* Pay Now if payment is due */}
+                    {paymentDue && (
+                      <div className="mt-3 flex items-center justify-between border-t border-amber-400/10 pt-2.5">
+                        <span className="text-xs font-medium text-amber-400">
+                          Payment is required for this trip
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveRide({
+                              ...item,
+                              ride_status: "completed",
+                              payment_status: "pending",
+                              actual_fare_paisa:
+                                item.final_fare_paisa || item.estimated_fare_paisa,
+                              driver_name: item.driver_name,
+                              pickup_zone_name: item.pickup_zone_name,
+                              dropoff_zone_name: item.dropoff_zone_name,
+                              seats: item.seats,
+                            });
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          className="rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-semibold text-neutral-950 transition-colors hover:bg-amber-300"
+                        >
+                          Pay Now (
+                          {(
+                            (item.final_fare_paisa ||
+                              item.estimated_fare_paisa) /
+                            100
+                          ).toFixed(2)}{" "}
+                          BDT)
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Feedback (Rating & Complaint) Section */}
+                    {isCompleted && (
+                      <div className="mt-3 border-t border-white/5 pt-2.5">
+                        {item.feedback_id ||
+                        item.rating !== null ||
+                        item.complaint ? (
+                          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5 text-xs">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-neutral-400">
+                                  Your Review:
+                                </span>
+                                {item.rating > 0 ? (
+                                  <span className="flex items-center font-medium text-amber-400">
+                                    {"★".repeat(item.rating)}
+                                    {"☆".repeat(5 - item.rating)}{" "}
+                                    <span className="ml-1 text-neutral-400">
+                                      ({item.rating}/5)
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <span className="text-neutral-500">
+                                    No star rating
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFeedbackTarget({
+                                    requestId: item.request_id,
+                                    driverName: item.driver_name,
+                                    pickupZoneName: item.pickup_zone_name,
+                                    dropoffZoneName: item.dropoff_zone_name,
+                                    initialRating: item.rating || 0,
+                                    initialComplaint: item.complaint || "",
+                                    isPostPayment: false,
+                                  })
+                                }
+                                className="text-xs font-medium text-emerald-400 underline hover:text-emerald-300"
+                              >
+                                Edit Feedback
+                              </button>
+                            </div>
+                            {item.complaint && (
+                              <p className="mt-1.5 rounded border border-white/5 bg-black/20 p-2 text-neutral-300 italic">
+                                “{item.complaint}”
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-neutral-500">
+                              No rating or complaint submitted yet
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFeedbackTarget({
+                                  requestId: item.request_id,
+                                  driverName: item.driver_name,
+                                  pickupZoneName: item.pickup_zone_name,
+                                  dropoffZoneName: item.dropoff_zone_name,
+                                  initialRating: 0,
+                                  initialComplaint: "",
+                                  isPostPayment: false,
+                                })
+                              }
+                              className="inline-flex items-center gap-1 rounded-lg border border-amber-400/20 bg-amber-400/10 px-2.5 py-1 text-xs font-semibold text-amber-300 transition-colors hover:bg-amber-400/20"
+                            >
+                              <span>★</span> Rate & Complaint
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
         </Card>
+      )}
+
+      {feedbackTarget && (
+        <FeedbackModal
+          target={feedbackTarget}
+          onClose={() => setFeedbackTarget(null)}
+          onSaved={async () => {
+            setSuccessMsg(
+              "Thank you! Your rating and feedback have been saved.",
+            );
+            await fetchActive();
+            await fetchHistory();
+          }}
+        />
       )}
     </div>
   );
