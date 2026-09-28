@@ -154,7 +154,7 @@ export default function ProfilePage({ user, updateUser }) {
           <button
             type="submit"
             disabled={busy}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 px-6 py-2.5 text-sm font-bold text-white dark:text-neutral-950 transition-colors disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-500 dark:text-neutral-950 dark:hover:bg-emerald-400"
           >
             <Save className="h-4 w-4" />
             <span>{busy ? "Saving…" : "Save Changes"}</span>

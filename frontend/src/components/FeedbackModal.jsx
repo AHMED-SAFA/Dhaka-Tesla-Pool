@@ -70,11 +70,21 @@ export default function FeedbackModal({ target, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg rounded-3xl border border-slate-200 dark:border-white/15 bg-white dark:bg-neutral-900 p-6 shadow-2xl">
+      <div className="relative flex max-h-[min(90dvh,640px)] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-white/15 dark:bg-neutral-900">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-3 top-3 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 dark:border-white/15 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 dark:hover:text-white"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        <div className="overflow-y-auto p-6 pr-14">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-slate-100 dark:border-white/10 pb-4">
+        <div className="border-b border-slate-100 pb-4 dark:border-white/10">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800/50 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
                 {target.isPostPayment ? "PAYMENT SUCCESSFUL" : "TRIP FEEDBACK"}
               </span>
@@ -95,14 +105,6 @@ export default function FeedbackModal({ target, onClose, onSaved }) {
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl p-1.5 text-slate-400 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-neutral-800 hover:text-slate-700 dark:hover:text-neutral-200 cursor-pointer"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
         {error && (
@@ -129,7 +131,7 @@ export default function FeedbackModal({ target, onClose, onSaved }) {
                     }
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(0)}
-                    className="p-1 transition-transform hover:scale-110 focus:outline-none cursor-pointer"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-lg p-0 hover:bg-amber-50 dark:hover:bg-white/5"
                     title={`${star} Star`}
                   >
                     <Star
@@ -205,24 +207,25 @@ export default function FeedbackModal({ target, onClose, onSaved }) {
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-white/10">
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-white/10">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="rounded-xl border border-slate-300 dark:border-white/15 bg-white dark:bg-neutral-800 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50 cursor-pointer"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-white/15 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
             >
               {target.isPostPayment ? "Skip for now" : "Cancel"}
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 px-5 py-2.5 text-xs font-bold text-white dark:text-neutral-950 transition-colors disabled:opacity-50 cursor-pointer"
+              className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-600 px-5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-500 dark:text-neutral-950 dark:hover:bg-emerald-400"
             >
               {submitting ? "Saving..." : "Submit Feedback"}
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

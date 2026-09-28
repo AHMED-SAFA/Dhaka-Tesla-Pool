@@ -253,29 +253,19 @@ export default function DashboardSidebar({
                 </p>
               </div>
             )}
-
-            {/* Logout button */}
-            {handleSignOut && !isCollapsed && (
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-                title="Sign out"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            )}
           </div>
 
-          {/* Collapsed logout button */}
-          {handleSignOut && isCollapsed && (
+          {handleSignOut && (
             <button
               type="button"
               onClick={handleSignOut}
-              className="mt-2 w-full flex justify-center p-2 rounded-xl text-neutral-400 hover:text-red-400 hover:bg-red-400/10 transition-colors"
               title="Sign out"
+              className={`mt-2 inline-flex h-10 w-full items-center gap-2 rounded-xl border border-white/10 bg-transparent px-3 text-sm font-medium text-neutral-300 hover:border-red-400/30 hover:bg-red-400/10 hover:text-red-300 ${
+                isCollapsed ? "justify-center px-0" : ""
+              }`}
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-4 w-4 shrink-0" />
+              {!isCollapsed && <span>Sign out</span>}
             </button>
           )}
         </div>

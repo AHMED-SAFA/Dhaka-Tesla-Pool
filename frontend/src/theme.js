@@ -84,6 +84,14 @@ export const appTheme = createTheme({
     borderRadius: 12,
   },
   components: {
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          width: 'auto',
+          padding: 8,
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {

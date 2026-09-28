@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Zap,
   Users,
@@ -11,12 +11,8 @@ import {
   ArrowRight,
   Sparkles,
   Leaf,
-  Clock,
-  Car,
 } from "lucide-react";
 import { useThemeMode } from "../ThemeModeContext.jsx";
-import { useAuth } from "../auth.jsx";
-import { api } from "../api.js";
 
 const STATS = [
   { value: "50K+", label: "Shared rides completed" },
@@ -92,24 +88,7 @@ const TESTIMONIALS = [
 
 export default function LandingPage() {
   const { mode, toggleTheme } = useThemeMode();
-  const { signIn } = useAuth();
-  const navigate = useNavigate();
   const isDark = mode === "dark";
-
-  const handleQuickDemo = async (role) => {
-    try {
-      const email =
-        role === "driver" ? "jashim@tesla.dhaka" : "nusrat@tesla.dhaka";
-      const data = await api("/api/auth/login", {
-        method: "POST",
-        body: { email, password: "Password123" },
-      });
-      signIn(data);
-      navigate("/");
-    } catch (e) {
-      navigate("/login");
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090d0b] text-slate-900 dark:text-neutral-100 transition-colors">
@@ -130,32 +109,31 @@ export default function LandingPage() {
             </div>
           </Link>
 
-          <div className="flex items-center gap-4">
-            {/* Dark / Light Mode Switch */}
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={toggleTheme}
               title={`Switch to ${isDark ? "Light" : "Dark"} mode`}
               aria-label="Toggle dark/light theme"
-              className="flex items-center justify-center h-9 w-9 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
             >
               {isDark ? (
-                <Sun className="h-[18px] w-[18px] text-amber-400" />
+                <Sun className="h-4 w-4 text-amber-400" />
               ) : (
-                <Moon className="h-[18px] w-[18px] text-slate-600" />
+                <Moon className="h-4 w-4 text-slate-600" />
               )}
             </button>
 
             <Link
               to="/login"
-              className="hidden sm:inline-flex items-center rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-white hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="inline-flex h-10 items-center justify-center rounded-xl px-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-neutral-100 dark:hover:bg-white/10"
             >
               Sign in
             </Link>
 
             <Link
               to="/register"
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white px-5 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-neutral-950"
             >
               <span>Get Started</span>
               <ArrowRight className="h-4 w-4" />
@@ -189,14 +167,14 @@ export default function LandingPage() {
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <Link
                 to="/register"
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-white px-6 py-3.5 text-base font-semibold transition-all cursor-pointer"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 text-base font-semibold text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-neutral-950 dark:hover:bg-emerald-400"
               >
                 <span>Book a Ride</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 to="/register"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-white/15 bg-white dark:bg-neutral-900 px-6 py-3.5 text-base font-semibold text-slate-800 dark:text-white hover:border-slate-400 dark:hover:border-white/30 transition-all cursor-pointer"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 text-base font-semibold text-slate-800 hover:bg-slate-50 dark:border-white/15 dark:bg-neutral-900 dark:text-white dark:hover:border-white/30 dark:hover:bg-neutral-800"
               >
                 <span>Drive with Tesla</span>
               </Link>
@@ -421,13 +399,13 @@ export default function LandingPage() {
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Link
               to="/register"
-              className="rounded-xl bg-white text-emerald-800 px-6 py-3.5 text-sm font-bold hover:bg-emerald-50 transition-colors cursor-pointer"
+              className="inline-flex h-12 items-center justify-center rounded-xl bg-white px-6 text-sm font-bold text-emerald-800 hover:bg-emerald-50"
             >
               Create Free Account
             </Link>
             <Link
               to="/login"
-              className="rounded-xl border border-white/40 px-6 py-3.5 text-sm font-bold text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="inline-flex h-12 items-center justify-center rounded-xl border border-white/40 px-6 text-sm font-bold text-white hover:bg-white/10"
             >
               Sign In to Portal
             </Link>

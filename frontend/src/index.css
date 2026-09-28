@@ -106,8 +106,9 @@ body {
 }
 
 @layer base {
-  a {
-    color: var(--accent-2);
+  button {
+    font: inherit;
+    cursor: pointer;
   }
 }
 .page {
@@ -197,28 +198,32 @@ h2 {
 .roles legend {
   color: var(--muted);
 }
-button,
 .btn-link {
-  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
   border: 0;
   background: var(--accent);
   color: #122016;
   font-weight: 700;
   border-radius: 10px;
-  padding: 12px;
+  padding: 12px 16px;
   cursor: pointer;
   font: inherit;
   text-align: center;
   text-decoration: none;
-  display: inline-block;
 }
 .password-toggle {
   position: absolute;
-  right: 8px;
-  top: 50%;
-  width: auto;
+  right: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 100%;
   padding: 0;
-  transform: translateY(-50%);
   background: transparent;
   color: var(--muted);
   border: 0;
@@ -229,7 +234,6 @@ button,
 .password-toggle:hover {
   color: var(--accent-2);
 }
-button.ghost,
 .ghost {
   width: auto;
   background: transparent;

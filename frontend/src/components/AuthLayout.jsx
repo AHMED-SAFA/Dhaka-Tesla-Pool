@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Zap, Sun, Moon, ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Zap, Sun, Moon, ArrowLeft, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { useThemeMode } from "../ThemeModeContext.jsx";
+
+const inputClassName =
+  "w-full rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-neutral-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-neutral-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors";
 
 export function AuthLayout({ title, subtitle, children, footer }) {
   const { mode, toggleTheme } = useThemeMode();
@@ -26,11 +29,11 @@ export function AuthLayout({ title, subtitle, children, footer }) {
             </div>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={toggleTheme}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 dark:border-white/15 bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:border-slate-300 dark:hover:border-white/30 transition-all cursor-pointer"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-white/15 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
               title={`Switch to ${isDark ? "Light" : "Dark"} mode`}
               aria-label="Toggle theme"
             >
@@ -43,7 +46,7 @@ export function AuthLayout({ title, subtitle, children, footer }) {
 
             <Link
               to="/"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-white"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               <span>Back Home</span>
@@ -121,6 +124,45 @@ export function Success({ children }) {
     <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/40 p-3 text-xs font-medium text-emerald-800 dark:text-emerald-300">
       <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
       <div>{children}</div>
+    </div>
+  );
+}
+
+export function PasswordInput({
+  value,
+  onChange,
+  placeholder = "••••••••",
+  required = false,
+  minLength,
+  autoComplete,
+}) {
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <div className="relative">
+      <input
+        type={showPassword ? "text" : "password"}
+        required={required}
+        minLength={minLength}
+        autoComplete={autoComplete}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        className={`${inputClassName} pr-12`}
+      />
+      <button
+        type="button"
+        onClick={() => setShowPassword((v) => !v)}
+        tabIndex={-1}
+        aria-label={showPassword ? "Hide password" : "Show password"}
+        className="absolute inset-y-0 right-0 z-10 inline-flex w-11 items-center justify-center rounded-r-xl bg-transparent p-0 text-slate-400 hover:text-slate-700 dark:text-neutral-500 dark:hover:text-neutral-200"
+      >
+        {showPassword ? (
+          <EyeOff className="h-4 w-4" />
+        ) : (
+          <Eye className="h-4 w-4" />
+        )}
+      </button>
     </div>
   );
 }

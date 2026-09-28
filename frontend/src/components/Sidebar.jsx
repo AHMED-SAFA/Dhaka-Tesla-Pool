@@ -62,7 +62,7 @@ export default function Sidebar({ user, signOut, activeSection, onSelect }) {
         <button
           type="button"
           onClick={signOut}
-          className="flex w-full items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm text-neutral-300 transition-colors hover:border-white/20 hover:text-white"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-transparent px-3 text-sm font-medium text-neutral-300 hover:border-white/20 hover:bg-white/5 hover:text-white"
         >
           <LogOut className="h-3.5 w-3.5" />
           Sign out

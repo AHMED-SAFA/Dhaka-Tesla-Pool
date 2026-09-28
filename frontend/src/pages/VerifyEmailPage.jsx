@@ -103,7 +103,7 @@ export default function VerifyEmailPage() {
         <button
           type="submit"
           disabled={busy}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-neutral-950 py-3 text-sm font-bold transition-colors disabled:opacity-50 cursor-pointer"
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-500 dark:text-neutral-950 dark:hover:bg-emerald-400"
         >
           <CheckCircle2 className="h-4 w-4" />
           <span>{busy ? 'Verifying…' : 'Verify Email'}</span>
@@ -113,7 +113,7 @@ export default function VerifyEmailPage() {
           type="button"
           onClick={resend}
           disabled={!email}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-white/15 bg-slate-100 dark:bg-neutral-800 py-2.5 text-xs font-semibold text-slate-700 dark:text-neutral-300 hover:border-slate-300 dark:hover:border-white/30 transition-colors disabled:opacity-50 cursor-pointer"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-50 dark:border-white/15 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
         >
           <RotateCw className="h-3.5 w-3.5" />
           <span>Resend verification code</span>
