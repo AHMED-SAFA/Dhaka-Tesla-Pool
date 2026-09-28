@@ -2,7 +2,12 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
-import { Alert, AuthLayout, Field, PasswordInput } from "../components/AuthLayout.jsx";
+import {
+  Alert,
+  AuthLayout,
+  Field,
+  PasswordInput,
+} from "../components/AuthLayout.jsx";
 import { LogIn } from "lucide-react";
 
 export default function LoginPage() {
@@ -80,6 +85,14 @@ export default function LoginPage() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
         </Field>
+
+        <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-neutral-800/50 px-3.5 py-3 text-xs text-slate-500 dark:text-neutral-400">
+          <p className="mb-1 font-semibold text-slate-600 dark:text-neutral-300">
+            Demo accounts
+          </p>
+          <p>Driver: jashim@tesla.dhaka · Password: Password123</p>
+          <p>Passenger: nusrat@tesla.dhaka · Password: Password123</p>
+        </div>
 
         <button
           type="submit"
