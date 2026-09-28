@@ -6,10 +6,35 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import {
+  Box,
+  Button,
+  Chip,
+  Divider,
+  Paper,
+  Rating,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { api } from "../api.js";
 import RideMap from "./RideMap.jsx";
 import { Card, StatusBadge } from "./ui.jsx";
 import FeedbackModal from "./FeedbackModal.jsx";
+import {
+  Car,
+  MapPin,
+  Users,
+  ShieldCheck,
+  CreditCard,
+  History,
+  Sparkles,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Star,
+  Clock,
+  ArrowRight,
+} from "lucide-react";
 
 function StripePaymentForm({ payment, onPaid }) {
   const stripe = useStripe();
@@ -42,11 +67,16 @@ function StripePaymentForm({ payment, onPaid }) {
   return (
     <form onSubmit={handleSubmit} className="mt-4 space-y-4">
       <PaymentElement />
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && (
+        <div className="flex items-center gap-2 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs font-semibold text-rose-700 dark:text-rose-400">
+          <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+          <span>{error}</span>
+        </div>
+      )}
       <button
         type="submit"
         disabled={!stripe || processing}
-        className="w-full rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-emerald-300 disabled:opacity-50"
+        className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 px-4 py-3 text-sm font-bold text-white dark:text-neutral-950 transition-colors disabled:opacity-50 cursor-pointer"
       >
         {processing ? "Processing payment..." : `Pay ${payment.amountBDT} BDT`}
       </button>
@@ -146,27 +176,31 @@ function PassengerPayment({ ride, onPaid }) {
   return (
     <div className="mt-5">
       {error && (
-        <p className="mb-3 rounded-lg border border-red-400/20 bg-red-400/5 px-3 py-2 text-sm text-red-400">
-          {error}
-        </p>
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs font-semibold text-rose-700 dark:text-rose-400">
+          <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+          <span>{error}</span>
+        </div>
       )}
       {!payment ? (
         <button
           type="button"
           disabled={loading}
           onClick={startPayment}
-          className="rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-emerald-300 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 px-5 py-2.5 text-sm font-bold text-white dark:text-neutral-950 transition-colors disabled:opacity-50 cursor-pointer"
         >
-          {loading ? "Opening Stripe..." : "Pay with Stripe"}
+          <CreditCard className="h-4 w-4" />
+          <span>
+            {loading ? "Opening Checkout..." : "Pay with Stripe Card"}
+          </span>
         </button>
       ) : payment.isDummy ? (
         <form onSubmit={handleDummyPayment} className="space-y-4">
-          <p className="text-xs text-amber-300">
-            Simulated payment. Any card details matching the required format are
-            accepted; no card data is sent or stored.
-          </p>
-          <label className="block text-sm text-neutral-300">
-            Card number
+          <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs font-medium text-amber-800 dark:text-amber-300">
+            Simulated payment test mode. You can enter any valid 16-digit card
+            test details.
+          </div>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">
+            Card Number
             <input
               required
               inputMode="numeric"
@@ -180,13 +214,13 @@ function PassengerPayment({ ride, onPaid }) {
                   event.target.value.replace(/\D/g, "").slice(0, 16),
                 )
               }
-              placeholder="16 digits"
-              className="mt-1.5 w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
+              placeholder="16 digits (e.g. 4242424242424242)"
+              className="mt-1.5 w-full rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-neutral-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
             />
           </label>
           <div className="grid grid-cols-3 gap-3">
-            <label className="block text-sm text-neutral-300">
-              Month
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">
+              Month (MM)
               <input
                 required
                 inputMode="numeric"
@@ -200,12 +234,12 @@ function PassengerPayment({ ride, onPaid }) {
                     event.target.value.replace(/\D/g, "").slice(0, 2),
                   )
                 }
-                placeholder="MM"
-                className="mt-1.5 w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
+                placeholder="12"
+                className="mt-1.5 w-full rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-neutral-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
               />
             </label>
-            <label className="block text-sm text-neutral-300">
-              Year
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">
+              Year (YYYY)
               <input
                 required
                 inputMode="numeric"
@@ -219,12 +253,12 @@ function PassengerPayment({ ride, onPaid }) {
                     event.target.value.replace(/\D/g, "").slice(0, 4),
                   )
                 }
-                placeholder="YYYY"
-                className="mt-1.5 w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
+                placeholder="2028"
+                className="mt-1.5 w-full rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-neutral-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
               />
             </label>
-            <label className="block text-sm text-neutral-300">
-              Security code
+            <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">
+              Security CVC
               <input
                 required
                 inputMode="numeric"
@@ -238,15 +272,15 @@ function PassengerPayment({ ride, onPaid }) {
                     event.target.value.replace(/\D/g, "").slice(0, 4),
                   )
                 }
-                placeholder="4 digits"
-                className="mt-1.5 w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-neutral-100"
+                placeholder="1234"
+                className="mt-1.5 w-full rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-neutral-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
               />
             </label>
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-emerald-300 disabled:opacity-50"
+            className="rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 px-5 py-2.5 text-sm font-bold text-white dark:text-neutral-950 transition-colors disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Confirming..." : `Pay ${payment.amountBDT} BDT`}
           </button>
@@ -386,7 +420,7 @@ export default function PassengerDashboard({ user, section = "ride" }) {
         },
       });
       setSuccessMsg(
-        "Ride requested! Looking for a Tesla with available seats...",
+        "Ride requested! Looking for an available Tesla along your route...",
       );
       await fetchActive();
     } catch (err) {
@@ -422,29 +456,32 @@ export default function PassengerDashboard({ user, section = "ride" }) {
   return (
     <div className="space-y-6">
       {errorMsg && (
-        <div className="rounded-lg border border-red-400/20 bg-red-400/5 px-4 py-3 text-sm text-red-400">
-          {errorMsg}
+        <div className="flex items-center gap-2.5 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 p-4 text-xs font-semibold text-rose-700 dark:text-rose-400">
+          <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+          <span>{errorMsg}</span>
         </div>
       )}
       {successMsg && (
-        <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-4 py-3 text-sm text-emerald-400">
-          {successMsg}
+        <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/40 p-4 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span>{successMsg}</span>
         </div>
       )}
 
+      {/* Settle Payment Screen */}
       {activeRide?.ride_status === "completed" &&
         activeRide.payment_status !== "paid" && (
-          <Card eyebrow="Payment Required">
+          <Card eyebrow="Payment Due">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold">
-                  Settle your completed ride
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                  Settle Your Completed Trip
                 </h2>
-                <p className="mt-1 text-sm text-neutral-400">
+                <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
                   {activeRide.pickup_zone_name} → {activeRide.dropoff_zone_name}
                 </p>
               </div>
-              <strong className="text-lg font-semibold text-emerald-400">
+              <strong className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
                 {(
                   (activeRide.actual_fare_paisa ||
                     activeRide.estimated_fare_paisa) / 100
@@ -459,8 +496,10 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                 setFeedbackTarget({
                   requestId: activeRide.request_id || res?.requestId,
                   driverName: activeRide.driver_name || res?.driverName,
-                  pickupZoneName: activeRide.pickup_zone_name || res?.pickupZoneName,
-                  dropoffZoneName: activeRide.dropoff_zone_name || res?.dropoffZoneName,
+                  pickupZoneName:
+                    activeRide.pickup_zone_name || res?.pickupZoneName,
+                  dropoffZoneName:
+                    activeRide.dropoff_zone_name || res?.dropoffZoneName,
                   initialRating: activeRide.rating || 0,
                   initialComplaint: activeRide.complaint || "",
                   isPostPayment: true,
@@ -472,25 +511,26 @@ export default function PassengerDashboard({ user, section = "ride" }) {
           </Card>
         )}
 
+      {/* Ride Booking or Active Tracker Section */}
       {section === "ride" &&
         activeRide?.ride_status !== "completed" &&
         (activeRide ? (
           <Card
-            eyebrow="Active Ride Tracker"
+            eyebrow="Active Trip Tracker"
             right={
               <StatusBadge
                 status={activeRide.ride_status || activeRide.request_status}
               />
             }
           >
-            <h3 className="text-lg font-semibold">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
               {activeRide.pickup_zone_name} → {activeRide.dropoff_zone_name}
             </h3>
 
-            <div className="mt-4">
+            <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
               <RideMap
                 mode="passenger-active"
-                height="260px"
+                height="280px"
                 pickup={{
                   lat: Number(activeRide.pickup_lat),
                   lng: Number(activeRide.pickup_lng),
@@ -505,15 +545,19 @@ export default function PassengerDashboard({ user, section = "ride" }) {
             </div>
 
             <div className="mt-5 grid grid-cols-2 gap-4">
-              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
-                <span className="text-xs text-neutral-500">Seats booked</span>
-                <p className="mt-1 text-sm font-medium">
+              <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-neutral-800/40 p-4">
+                <span className="text-xs font-semibold text-slate-500 dark:text-neutral-400 uppercase tracking-wider">
+                  Seats Booked
+                </span>
+                <p className="mt-1 text-base font-bold text-slate-900 dark:text-white">
                   {activeRide.seats} {activeRide.seats > 1 ? "seats" : "seat"}
                 </p>
               </div>
-              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
-                <span className="text-xs text-neutral-500">Your fare</span>
-                <p className="mt-1 text-sm font-medium text-emerald-400">
+              <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-neutral-800/40 p-4">
+                <span className="text-xs font-semibold text-slate-500 dark:text-neutral-400 uppercase tracking-wider">
+                  Your Pooled Fare
+                </span>
+                <p className="mt-1 text-base font-bold text-emerald-600 dark:text-emerald-400">
                   {(
                     (activeRide.actual_fare_paisa ||
                       activeRide.estimated_fare_paisa) / 100
@@ -521,8 +565,8 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                   BDT
                 </p>
                 {activeRide.solo_fare_paisa != null && (
-                  <p className="mt-1 text-xs text-emerald-400">
-                    You save{" "}
+                  <p className="mt-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    Saved{" "}
                     {((activeRide.pool_savings_paisa || 0) / 100).toFixed(2)} tk
                     by pooling!
                   </p>
@@ -531,43 +575,43 @@ export default function PassengerDashboard({ user, section = "ride" }) {
             </div>
 
             {activeRide.request_status === "waiting" && !activeRide.ride_id && (
-              <div className="mt-5 flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-sm text-neutral-400">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-sky-400" />
-                Finding a nearby Tesla in your direction…
+              <div className="mt-5 flex items-center gap-3 rounded-xl border border-sky-200 dark:border-sky-900/50 bg-sky-50 dark:bg-sky-950/40 p-4 text-xs font-medium text-sky-800 dark:text-sky-300">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-sky-500" />
+                <span>Searching for a matched Tesla along your corridor…</span>
               </div>
             )}
 
             {activeRide.ride_id && (
-              <div className="mt-5 rounded-xl border border-white/5 bg-white/[0.02] p-4">
+              <div className="mt-5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-neutral-800/40 p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <strong className="text-sm">
-                    {activeRide.tesla_name || "Dhaka Tesla"}
+                  <strong className="text-sm font-bold text-slate-900 dark:text-white">
+                    ⚡ {activeRide.tesla_name || "Dhaka Tesla"}
                   </strong>
-                  <span className="text-xs text-neutral-500">
-                    {activeRide.occupied_seats} / {activeRide.tesla_capacity}{" "}
-                    seats
+                  <span className="text-xs font-semibold text-slate-500 dark:text-neutral-400">
+                    Occupancy: {activeRide.occupied_seats} /{" "}
+                    {activeRide.tesla_capacity} seats
                   </span>
                 </div>
-                <p className="mt-1.5 text-sm text-neutral-400">
+                <p className="text-xs text-slate-600 dark:text-neutral-300">
                   Driver:{" "}
-                  <strong className="text-neutral-200">
+                  <strong className="font-semibold text-slate-900 dark:text-white">
                     {activeRide.driver_name}
                   </strong>{" "}
                   {activeRide.driver_phone && `(${activeRide.driver_phone})`}
                 </p>
                 {activeRide.ride_status === "matched" && (
-                  <p className="mt-2 text-sm text-sky-400">
-                    Driver matched! Heading to pickup zone.
+                  <p className="text-xs font-semibold text-sky-600 dark:text-sky-400">
+                    Driver accepted! Heading to your pickup point.
                   </p>
                 )}
                 {activeRide.ride_status === "driver_arrived" && (
-                  <p className="mt-2 text-sm text-amber-400">
+                  <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
                     Driver has arrived at {activeRide.pickup_zone_name}!
                   </p>
                 )}
                 {activeRide.ride_status === "started" && (
-                  <p className="mt-2 text-sm text-emerald-400">
-                    Trip in progress! Relax and enjoy your Tesla pool ride.
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    Trip in progress. Enjoy your quiet electric ride.
                   </p>
                 )}
               </div>
@@ -580,28 +624,40 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                 type="button"
                 disabled={cancelling}
                 onClick={handleCancelRide}
-                className="mt-5 rounded-lg border border-red-400/20 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-400/5 disabled:opacity-50"
+                className="mt-5 inline-flex items-center gap-1.5 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 px-4 py-2 text-xs font-bold text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {cancelling ? "Cancelling..." : "Cancel Request"}
+                <XCircle className="h-4 w-4" />
+                <span>
+                  {cancelling ? "Cancelling..." : "Cancel Ride Request"}
+                </span>
               </button>
             )}
           </Card>
         ) : (
           <Card eyebrow="Request a Shared Tesla">
-            <h2 className="text-lg font-semibold">Book your pool seat</h2>
-            <div className="mt-5 grid gap-6 lg:grid-cols-2">
-              <form onSubmit={handleRequestRide} className="space-y-4">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              Book Your Electric Pool Seat
+            </h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">
+              Select origin and destination to see upfront per-seat pooled fare.
+            </p>
+
+            <div className="mt-6 grid gap-8 lg:grid-cols-12">
+              <form
+                onSubmit={handleRequestRide}
+                className="lg:col-span-6 space-y-4"
+              >
                 <div>
-                  <label className="mb-1.5 block text-sm text-neutral-400">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
                     Pickup Zone
                   </label>
                   <select
                     value={pickupZoneId}
                     onChange={(e) => setPickupZoneId(e.target.value)}
                     required
-                    className="w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 focus:border-emerald-400/50 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-neutral-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
                   >
-                    <option value="">Select pickup zone</option>
+                    <option value="">Select pickup point</option>
                     {zones.map((z) => (
                       <option
                         key={z.id}
@@ -615,16 +671,16 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-sm text-neutral-400">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
                     Destination Zone
                   </label>
                   <select
                     value={dropoffZoneId}
                     onChange={(e) => setDropoffZoneId(e.target.value)}
                     required
-                    className="w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 focus:border-emerald-400/50 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-neutral-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
                   >
-                    <option value="">Select destination zone</option>
+                    <option value="">Select destination point</option>
                     {zones.map((z) => (
                       <option
                         key={z.id}
@@ -638,69 +694,45 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-sm text-neutral-400">
-                    Seats Needed
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
+                    Passenger Seats Needed
                   </label>
                   <select
                     value={seats}
                     onChange={(e) => setSeats(Number(e.target.value))}
-                    className="w-full rounded-lg border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 focus:border-emerald-400/50 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-neutral-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
                   >
-                    <option value={1}>1 Passenger (Solo Seat)</option>
-                    <option value={2}>2 Passengers</option>
-                    <option value={3}>
-                      3 Passengers (Entire Bullet Tesla)
-                    </option>
+                    <option value={1}>1 Seat (Individual Commuter)</option>
+                    <option value={2}>2 Seats</option>
+                    <option value={3}>3 Seats (Private Pool)</option>
                   </select>
                 </div>
 
                 {estimate && (
-                  <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.03] p-4">
-                    <div className="flex items-center justify-between text-sm text-neutral-400">
-                      <span>Distance: ~{estimate.distanceKm} km</span>
-                      <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-xs text-emerald-400">
-                        Pool discount −{estimate.pooledFare.poolDiscountBDT} BDT
+                  <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/70 dark:bg-emerald-950/30 p-4 space-y-3">
+                    <div className="flex items-center justify-between text-xs text-slate-600 dark:text-neutral-400">
+                      <span>
+                        Est. Corridor Distance: ~{estimate.distanceKm} km
+                      </span>
+                      <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                        Pool Savings: −{estimate.pooledFare.poolDiscountBDT} BDT
                       </span>
                     </div>
-                    <div className="mt-2 space-y-1 text-sm text-neutral-400">
-                      <div>
-                        Base fare: {estimate.pooledFare.baseFareBDT} BDT
-                      </div>
-                      <div>
-                        Distance: {estimate.pooledFare.distanceChargeBDT} BDT
-                      </div>
-                      <div className="text-emerald-400">
-                        − {estimate.pooledFare.poolDiscountBDT} BDT
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
-                      <span className="text-sm text-neutral-300">
-                        Estimated Fare
+
+                    <div className="flex items-center justify-between border-t border-emerald-200/60 dark:border-emerald-900/40 pt-2.5">
+                      <span className="text-sm font-semibold text-slate-800 dark:text-neutral-200">
+                        Your Pooled Fare
                       </span>
-                      <span className="text-lg font-semibold text-emerald-400">
+                      <span className="text-xl font-black text-emerald-700 dark:text-emerald-400">
                         {estimate.estimatedFareBDT} BDT
                       </span>
                     </div>
-                    <div className="mt-3 rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-sm">
-                      <div className="flex items-center justify-between text-neutral-300">
-                        <span>Solo fare</span>
-                        <span>{estimate.soloFare.finalFareBDT} BDT</span>
-                      </div>
-                      <div className="mt-1 flex items-center justify-between font-medium text-emerald-400">
-                        <span>
-                          You save {estimate.poolSavingsBDT} tk by pooling!
-                        </span>
-                        <span>Fairness check</span>
-                      </div>
-                      <p className="mt-1 text-xs text-neutral-500">
-                        Your pooled fare is{" "}
-                        {Math.round(
-                          (estimate.estimatedFarePaisa /
-                            estimate.soloFare.finalFarePaisa) *
-                            100,
-                        )}
-                        % of solo pricing.
-                      </p>
+
+                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-neutral-400">
+                      <span>Solo Cab Comparison</span>
+                      <span className="line-through">
+                        {estimate.soloFare.finalFareBDT} BDT
+                      </span>
                     </div>
                   </div>
                 )}
@@ -713,51 +745,64 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                     !dropoffZoneId ||
                     pickupZoneId === dropoffZoneId
                   }
-                  className="w-full rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-medium text-neutral-950 transition-colors hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-neutral-950 py-3 text-sm font-bold transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                  {submitting ? "Requesting..." : "Request Tesla Pool Ride"}
+                  <Car className="h-4 w-4" />
+                  <span>
+                    {submitting ? "Requesting..." : "Request Tesla Pool Seat"}
+                  </span>
                 </button>
               </form>
 
-              <div>
-                <div className="mb-2 text-sm text-neutral-400">
+              {/* Map Preview */}
+              <div className="lg:col-span-6 space-y-2">
+                <span className="block text-xs font-semibold text-slate-600 dark:text-neutral-400">
                   {selectedPickupZone && selectedDropoffZone
                     ? `${selectedPickupZone.name} → ${selectedDropoffZone.name}`
-                    : "Select pickup & drop-off locations to preview route"}
+                    : "Select route endpoints to inspect on map"}
+                </span>
+                <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
+                  <RideMap
+                    mode="passenger-select"
+                    height="320px"
+                    pickup={
+                      selectedPickupZone
+                        ? {
+                            lat: Number(selectedPickupZone.latitude),
+                            lng: Number(selectedPickupZone.longitude),
+                            label: selectedPickupZone.name,
+                          }
+                        : null
+                    }
+                    dropoff={
+                      selectedDropoffZone
+                        ? {
+                            lat: Number(selectedDropoffZone.latitude),
+                            lng: Number(selectedDropoffZone.longitude),
+                            label: selectedDropoffZone.name,
+                          }
+                        : null
+                    }
+                  />
                 </div>
-                <RideMap
-                  mode="passenger-select"
-                  height="320px"
-                  pickup={
-                    selectedPickupZone
-                      ? {
-                          lat: Number(selectedPickupZone.latitude),
-                          lng: Number(selectedPickupZone.longitude),
-                          label: selectedPickupZone.name,
-                        }
-                      : null
-                  }
-                  dropoff={
-                    selectedDropoffZone
-                      ? {
-                          lat: Number(selectedDropoffZone.latitude),
-                          lng: Number(selectedDropoffZone.longitude),
-                          label: selectedDropoffZone.name,
-                        }
-                      : null
-                  }
-                />
               </div>
             </div>
           </Card>
         ))}
 
+      {/* History Section */}
       {section === "history" && (
-        <Card eyebrow="Your Rides">
+        <Card eyebrow="Trip & Payment History">
           {history.length === 0 ? (
-            <p className="text-sm text-neutral-500">No past rides yet.</p>
+            <Typography
+              color="text.secondary"
+              variant="body2"
+              sx={{ py: 4, textAlign: "center" }}
+            >
+              No previous rides found. Request your first Tesla pool ride today!
+            </Typography>
           ) : (
-            <div className="space-y-3">
+            <Stack spacing={2}>
               {history.map((item) => {
                 const isCompleted =
                   item.ride_status === "completed" ||
@@ -766,138 +811,248 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                 const paymentDue = isCompleted && !isPaid;
 
                 return (
-                  <div
+                  <Paper
                     key={item.request_id}
-                    className={`rounded-xl border p-4 ${
-                      paymentDue
-                        ? "border-amber-400/20 bg-amber-400/[0.03]"
-                        : "border-white/5 bg-white/[0.02]"
-                    }`}
+                    variant="outlined"
+                    sx={{
+                      minWidth: 0,
+                      p: { xs: 1.75, sm: 2.5 },
+                      borderRadius: 2,
+                      borderColor: paymentDue ? "warning.main" : "divider",
+                      bgcolor: "background.paper",
+                    }}
                   >
-                    <div className="flex items-center justify-between">
-                      <strong className="text-sm">
-                        {item.pickup_zone_name} → {item.dropoff_zone_name}
-                      </strong>
-                      <div className="flex items-center gap-2">
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      alignItems={{ xs: "flex-start", sm: "center" }}
+                      justifyContent="space-between"
+                      gap={1.5}
+                    >
+                      <Stack
+                        direction="row"
+                        alignItems="flex-start"
+                        gap={1}
+                        sx={{ minWidth: 0 }}
+                      >
+                        <MapPin className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                        <Typography
+                          variant="subtitle1"
+                          fontWeight={700}
+                          sx={{ minWidth: 0, overflowWrap: "anywhere" }}
+                        >
+                          {item.pickup_zone_name} → {item.dropoff_zone_name}
+                        </Typography>
+                      </Stack>
+
+                      <Stack direction="row" flexWrap="wrap" useFlexGap gap={1}>
                         {paymentDue ? (
-                          <span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-xs font-medium tracking-wide text-amber-400">
-                            PAYMENT DUE
-                          </span>
+                          <Chip
+                            size="small"
+                            color="warning"
+                            label="Payment due"
+                          />
                         ) : isPaid ? (
-                          <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-medium tracking-wide text-emerald-400">
-                            PAID
-                          </span>
+                          <Chip size="small" color="success" label="Paid" />
                         ) : (
                           <StatusBadge
                             status={item.ride_status || item.request_status}
                           />
                         )}
-                      </div>
-                    </div>
-                    <div className="mt-1.5 flex items-center justify-between text-sm text-neutral-400">
-                      <span>
-                        {item.seats} seat(s) · {item.tesla_name || "Tesla"}
-                      </span>
-                      <span
-                        className={`font-medium ${
-                          paymentDue ? "text-amber-400" : "text-emerald-400"
-                        }`}
+                      </Stack>
+                    </Stack>
+
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      alignItems={{ xs: "flex-start", sm: "center" }}
+                      justifyContent="space-between"
+                      gap={0.75}
+                      sx={{ mt: 1.5 }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ overflowWrap: "anywhere" }}
                       >
-                        {paymentDue ? "Due: " : ""}
+                        {item.seats} {item.seats > 1 ? "seats" : "seat"} ·{" "}
+                        {item.tesla_name || "Tesla Fleet"}
+                      </Typography>
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight={700}
+                        color={paymentDue ? "warning.dark" : "success.main"}
+                      >
+                        {paymentDue ? "Fare Due: " : "Fare: "}
                         {(
                           (item.final_fare_paisa || item.estimated_fare_paisa) /
                           100
                         ).toFixed(2)}{" "}
                         BDT
-                      </span>
-                    </div>
+                      </Typography>
+                    </Stack>
+
                     {item.solo_fare_paisa != null && (
-                      <div className="mt-1 text-xs text-emerald-400">
-                        You save{" "}
-                        {((item.pool_savings_paisa || 0) / 100).toFixed(2)} tk by
-                        pooling!
-                      </div>
+                      <Typography
+                        variant="caption"
+                        color="success.main"
+                        fontWeight={600}
+                        display="block"
+                        sx={{ mt: 0.5 }}
+                      >
+                        Saved{" "}
+                        {((item.pool_savings_paisa || 0) / 100).toFixed(2)} tk
+                        by pooling!
+                      </Typography>
                     )}
-                    {isPaid && item.paid_at && (
-                      <div className="mt-1 text-xs text-neutral-500">
-                        Paid on{" "}
-                        {new Date(item.paid_at).toLocaleDateString()}{" "}
-                        {new Date(item.paid_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    )}
-                    <div className="mt-1 text-xs text-neutral-500">
+
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                      sx={{ mt: 1, overflowWrap: "anywhere" }}
+                    >
+                      Booked on {new Date(item.created_at).toLocaleDateString()}{" "}
+                      at{" "}
                       {new Date(item.created_at).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </div>
-
-                    {/* Pay Now if payment is due */}
-                    {paymentDue && (
-                      <div className="mt-3 flex items-center justify-between border-t border-amber-400/10 pt-2.5">
-                        <span className="text-xs font-medium text-amber-400">
-                          Payment is required for this trip
+                      {isPaid && item.paid_at && (
+                        <span>
+                          {" "}
+                          · Succeeded on{" "}
+                          {new Date(item.paid_at).toLocaleDateString()}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveRide({
-                              ...item,
-                              ride_status: "completed",
-                              payment_status: "pending",
-                              actual_fare_paisa:
-                                item.final_fare_paisa || item.estimated_fare_paisa,
-                              driver_name: item.driver_name,
-                              pickup_zone_name: item.pickup_zone_name,
-                              dropoff_zone_name: item.dropoff_zone_name,
-                              seats: item.seats,
-                            });
-                            window.scrollTo({ top: 0, behavior: "smooth" });
-                          }}
-                          className="rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-semibold text-neutral-950 transition-colors hover:bg-amber-300"
+                      )}
+                    </Typography>
+
+                    {/* Pay Now Button */}
+                    {paymentDue && (
+                      <>
+                        <Divider
+                          sx={{ my: 1.5, borderColor: "warning.light" }}
+                        />
+                        <Stack
+                          direction={{ xs: "column", sm: "row" }}
+                          alignItems={{ xs: "stretch", sm: "center" }}
+                          justifyContent="space-between"
+                          gap={1.5}
                         >
-                          Pay Now (
-                          {(
-                            (item.final_fare_paisa ||
-                              item.estimated_fare_paisa) /
-                            100
-                          ).toFixed(2)}{" "}
-                          BDT)
-                        </button>
-                      </div>
+                          <Typography
+                            variant="body2"
+                            color="warning.dark"
+                            fontWeight={600}
+                          >
+                            Settle payment for this trip
+                          </Typography>
+                          <Button
+                            type="button"
+                            variant="contained"
+                            color="warning"
+                            size="small"
+                            sx={{
+                              alignSelf: { xs: "stretch", sm: "auto" },
+                              whiteSpace: "nowrap",
+                            }}
+                            onClick={() => {
+                              setActiveRide({
+                                ...item,
+                                ride_status: "completed",
+                                payment_status: "pending",
+                                actual_fare_paisa:
+                                  item.final_fare_paisa ||
+                                  item.estimated_fare_paisa,
+                                driver_name: item.driver_name,
+                                pickup_zone_name: item.pickup_zone_name,
+                                dropoff_zone_name: item.dropoff_zone_name,
+                                seats: item.seats,
+                              });
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                          >
+                            Pay Now (
+                            {(
+                              (item.final_fare_paisa ||
+                                item.estimated_fare_paisa) / 100
+                            ).toFixed(2)}{" "}
+                            BDT)
+                          </Button>
+                        </Stack>
+                      </>
                     )}
 
-                    {/* Feedback (Rating & Complaint) Section */}
+                    {/* Feedback / Review Section */}
                     {isCompleted && (
-                      <div className="mt-3 border-t border-white/5 pt-2.5">
+                      <>
+                        <Divider sx={{ my: 1.5 }} />
                         {item.feedback_id ||
                         item.rating !== null ||
                         item.complaint ? (
-                          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5 text-xs">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-semibold text-neutral-400">
-                                  Your Review:
-                                </span>
+                          <Box
+                            sx={{
+                              borderRadius: 1.5,
+                              bgcolor: "action.hover",
+                              p: 1.5,
+                            }}
+                          >
+                            <Stack
+                              direction={{ xs: "column", sm: "row" }}
+                              alignItems={{ xs: "flex-start", sm: "center" }}
+                              justifyContent="space-between"
+                              gap={1}
+                            >
+                              <Stack
+                                direction="row"
+                                useFlexGap
+                                flexWrap="wrap"
+                                alignItems="center"
+                                gap={1}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                  fontWeight={600}
+                                >
+                                  Your trip rating:
+                                </Typography>
                                 {item.rating > 0 ? (
-                                  <span className="flex items-center font-medium text-amber-400">
-                                    {"★".repeat(item.rating)}
-                                    {"☆".repeat(5 - item.rating)}{" "}
-                                    <span className="ml-1 text-neutral-400">
+                                  <Stack
+                                    direction="row"
+                                    alignItems="center"
+                                    gap={0.75}
+                                  >
+                                    <Rating
+                                      value={item.rating}
+                                      readOnly
+                                      size="small"
+                                    />
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
                                       ({item.rating}/5)
-                                    </span>
-                                  </span>
+                                    </Typography>
+                                  </Stack>
                                 ) : (
-                                  <span className="text-neutral-500">
-                                    No star rating
-                                  </span>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    No rating
+                                  </Typography>
                                 )}
-                              </div>
-                              <button
+                              </Stack>
+                              <Button
                                 type="button"
+                                size="small"
+                                color="success"
+                                sx={{
+                                  minWidth: 0,
+                                  minHeight: 0,
+                                  p: 1,
+                                  flexShrink: 35,
+                                  fontSize: "0.75rem",
+                                  lineHeight: 2.5,
+                                }}
                                 onClick={() =>
                                   setFeedbackTarget({
                                     requestId: item.request_id,
@@ -909,24 +1064,44 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                                     isPostPayment: false,
                                   })
                                 }
-                                className="text-xs font-medium text-emerald-400 underline hover:text-emerald-300"
                               >
-                                Edit Feedback
-                              </button>
-                            </div>
+                                Edit review
+                              </Button>
+                            </Stack>
                             {item.complaint && (
-                              <p className="mt-1.5 rounded border border-white/5 bg-black/20 p-2 text-neutral-300 italic">
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  mt: 1,
+                                  p: 1.25,
+                                  borderRadius: 1.5,
+                                  bgcolor: "background.paper",
+                                  overflowWrap: "anywhere",
+                                }}
+                              >
                                 “{item.complaint}”
-                              </p>
+                              </Typography>
                             )}
-                          </div>
+                          </Box>
                         ) : (
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-neutral-500">
-                              No rating or complaint submitted yet
-                            </span>
-                            <button
+                          <Stack
+                            direction={{ xs: "column", sm: "row" }}
+                            alignItems={{ xs: "flex-start", sm: "center" }}
+                            justifyContent="space-between"
+                            gap={1.5}
+                          >
+                            <Typography variant="body2" color="text.secondary">
+                              How was your ride experience?
+                            </Typography>
+                            <Button
                               type="button"
+                              variant="outlined"
+                              color="warning"
+                              size="small"
+                              startIcon={
+                                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                              }
+                              sx={{ alignSelf: { xs: "stretch", sm: "auto" } }}
                               onClick={() =>
                                 setFeedbackTarget({
                                   requestId: item.request_id,
@@ -938,18 +1113,17 @@ export default function PassengerDashboard({ user, section = "ride" }) {
                                   isPostPayment: false,
                                 })
                               }
-                              className="inline-flex items-center gap-1 rounded-lg border border-amber-400/20 bg-amber-400/10 px-2.5 py-1 text-xs font-semibold text-amber-300 transition-colors hover:bg-amber-400/20"
                             >
-                              <span>★</span> Rate & Complaint
-                            </button>
-                          </div>
+                              Rate driver & feedback
+                            </Button>
+                          </Stack>
                         )}
-                      </div>
+                      </>
                     )}
-                  </div>
+                  </Paper>
                 );
               })}
-            </div>
+            </Stack>
           )}
         </Card>
       )}

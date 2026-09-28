@@ -6,47 +6,88 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --bg: #0f1412;
-  --bg-2: #17201c;
-  --card: #1c2823;
-  --text: #e8efe9;
-  --muted: #9bb0a4;
-  --accent: #c6f26d;
-  --accent-2: #3dd6c6;
-  --danger: #ff8a7a;
-  --ok: #8ee0a8;
-  --border: #2d3d35;
-  --sans: "Segoe UI", system-ui, sans-serif;
+  --bg: #f8fafc;
+  --bg-2: #f1f5f9;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --accent: #059669;
+  --accent-2: #0284c7;
+  --danger: #ef4444;
+  --ok: #10b981;
+  --border: #e2e8f0;
+  --sans: "GeistVariable", "Segoe UI", system-ui, sans-serif;
 
-  /* shadcn dark variables mapped to brand theme */
-  --background: #0f1412;
-  --foreground: #e8efe9;
-  --card-foreground: #e8efe9;
-  --popover: #17201c;
-  --popover-foreground: #e8efe9;
-  --primary: #c6f26d;
-  --primary-foreground: #0f1412;
-  --secondary: #17201c;
-  --secondary-foreground: #e8efe9;
-  --muted-foreground: #9bb0a4;
-  --accent-foreground: #0f1412;
-  --destructive: #ff8a7a;
-  --input: #2d3d35;
-  --ring: #3dd6c6;
-  --chart-1: #c6f26d;
-  --chart-2: #3dd6c6;
-  --chart-3: #8ee0a8;
-  --chart-4: #60a5fa;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #059669;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted-foreground: #64748b;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --input: #e2e8f0;
+  --ring: #059669;
+  --chart-1: #059669;
+  --chart-2: #0284c7;
+  --chart-3: #10b981;
+  --chart-4: #3b82f6;
   --chart-5: #f59e0b;
   --radius: 0.625rem;
-  --sidebar: #17201c;
-  --sidebar-foreground: #e8efe9;
-  --sidebar-primary: #c6f26d;
-  --sidebar-primary-foreground: #0f1412;
-  --sidebar-accent: #1c2823;
-  --sidebar-accent-foreground: #e8efe9;
-  --sidebar-border: #2d3d35;
-  --sidebar-ring: #3dd6c6;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: #059669;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #059669;
+}
+
+.dark,
+[data-toolpad-color-scheme="dark"] {
+  --bg: #090d0b;
+  --bg-2: #111714;
+  --card: #141c18;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --accent: #10b981;
+  --accent-2: #38bdf8;
+  --danger: #f87171;
+  --ok: #34d399;
+  --border: #1e2923;
+
+  --background: #090d0b;
+  --foreground: #f1f5f9;
+  --card-foreground: #f1f5f9;
+  --popover: #111714;
+  --popover-foreground: #f1f5f9;
+  --primary: #10b981;
+  --primary-foreground: #041d14;
+  --secondary: #111714;
+  --secondary-foreground: #f1f5f9;
+  --muted-foreground: #94a3b8;
+  --accent-foreground: #041d14;
+  --destructive: #f87171;
+  --input: #1e2923;
+  --ring: #10b981;
+  --chart-1: #10b981;
+  --chart-2: #38bdf8;
+  --chart-3: #34d399;
+  --chart-4: #60a5fa;
+  --chart-5: #f59e0b;
+  --sidebar: #111714;
+  --sidebar-foreground: #f1f5f9;
+  --sidebar-primary: #10b981;
+  --sidebar-primary-foreground: #041d14;
+  --sidebar-accent: #141c18;
+  --sidebar-accent-foreground: #f1f5f9;
+  --sidebar-border: #1e2923;
+  --sidebar-ring: #10b981;
 }
 
 * {
@@ -60,23 +101,14 @@ body,
 }
 body {
   font-family: var(--sans);
-  background:
-    radial-gradient(
-      1200px 600px at 10% -10%,
-      rgba(61, 214, 198, 0.16),
-      transparent
-    ),
-    radial-gradient(
-      900px 500px at 100% 0%,
-      rgba(198, 242, 109, 0.1),
-      transparent
-    ),
-    var(--bg);
-  color: var(--text);
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
-a {
-  color: var(--accent-2);
+@layer base {
+  a {
+    color: var(--accent-2);
+  }
 }
 .page {
   min-height: 100svh;
@@ -417,7 +449,7 @@ button.ghost,
 }
 .meter-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  background: var(--accent);
   transition: width 0.3s ease;
 }
 
@@ -933,19 +965,8 @@ button.ghost,
     border-color: var(--border);
   }
   body {
-    background:
-      radial-gradient(
-        1200px 600px at 10% -10%,
-        rgba(61, 214, 198, 0.16),
-        transparent
-      ),
-      radial-gradient(
-        900px 500px at 100% 0%,
-        rgba(198, 242, 109, 0.1),
-        transparent
-      ),
-      var(--bg);
-    color: var(--text);
+    background-color: var(--background);
+    color: var(--foreground);
   }
   html {
     @apply font-sans;

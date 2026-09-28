@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { Card } from "./ui.jsx";
+import { User, CheckCircle2, AlertCircle, Save } from "lucide-react";
 
 export default function ProfilePage({ user, updateUser }) {
   const [form, setForm] = useState({
@@ -65,86 +66,98 @@ export default function ProfilePage({ user, updateUser }) {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs font-medium uppercase tracking-wider text-emerald-400">
-          Account
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold">Your profile</h1>
-        <p className="mt-1 text-sm text-neutral-400">
-          Keep your ride details current.
+        <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+          Account Settings
+        </span>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          Your Profile & Credentials
+        </h1>
+        <p className="text-xs text-slate-500 dark:text-neutral-400">
+          Manage your contact information, national ID, and vehicle specifications.
         </p>
       </div>
+
       <Card>
         <form onSubmit={onSubmit} className="space-y-5">
           {status.error && (
-            <div className="rounded-lg border border-red-400/20 bg-red-400/5 px-4 py-3 text-sm text-red-400">
-              {status.error}
+            <div className="flex items-center gap-2 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs font-semibold text-rose-700 dark:text-rose-400">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+              <span>{status.error}</span>
             </div>
           )}
           {status.success && (
-            <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-4 py-3 text-sm text-emerald-400">
-              {status.success}
+            <div className="flex items-center gap-2 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/40 p-3 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span>{status.success}</span>
             </div>
           )}
+
           <div className="grid gap-5 sm:grid-cols-2">
             <ProfileField
-              label="Full name"
+              label="Full Name"
               value={form.fullName}
               onChange={(value) => update("fullName", value)}
               required
             />
             <ProfileField
-              label="Phone"
+              label="Phone Number"
               value={form.phone}
               onChange={(value) => update("phone", value)}
               placeholder="01XXXXXXXXX"
             />
             <ProfileField
-              label="Email"
+              label="Registered Email"
               value={form.email}
               disabled
-              hint="Email cannot be changed."
+              hint="Email address cannot be changed."
             />
             <ProfileField
               label="Password"
               value="••••••••"
               disabled
-              hint="Password is managed through reset password."
+              hint="Managed securely via Password Reset."
             />
-            <ProfileField label="Role" value={form.role} disabled />
+            <ProfileField label="Account Role" value={form.role.toUpperCase()} disabled />
             <ProfileField
-              label="NID"
+              label="National ID (NID)"
               value={form.nid}
               onChange={(value) => update("nid", value)}
+              placeholder="NID Number"
             />
             <ProfileField
-              label="Date of birth"
+              label="Date of Birth"
               type="date"
               value={form.dateOfBirth}
               onChange={(value) => update("dateOfBirth", value)}
             />
             {user.role === "driver" && (
               <ProfileField
-                label="Tesla number"
+                label="Tesla Plate / Registration Number"
                 value={form.teslaNumber}
                 onChange={(value) => update("teslaNumber", value)}
+                placeholder="DHK-METRO-GA-1234"
               />
             )}
           </div>
-          <label className="block text-sm text-neutral-300">
-            Address
+
+          <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">
+            Current Address
             <textarea
               value={form.address}
               onChange={(event) => update("address", event.target.value)}
               rows={3}
-              className="mt-2 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-white outline-none transition focus:border-emerald-400/60"
+              placeholder="House, Road, Area, Dhaka"
+              className="mt-1.5 w-full rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-neutral-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 transition-colors"
             />
           </label>
+
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-medium text-neutral-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 px-6 py-2.5 text-sm font-bold text-white dark:text-neutral-950 transition-colors disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
           >
-            {busy ? "Saving…" : "Save profile"}
+            <Save className="h-4 w-4" />
+            <span>{busy ? "Saving…" : "Save Changes"}</span>
           </button>
         </form>
       </Card>
@@ -163,7 +176,7 @@ function ProfileField({
   hint,
 }) {
   return (
-    <label className="block text-sm text-neutral-300">
+    <label className="block text-xs font-semibold text-slate-700 dark:text-neutral-300">
       {label}
       <input
         type={type}
@@ -172,10 +185,12 @@ function ProfileField({
         disabled={disabled}
         required={required}
         placeholder={placeholder}
-        className="mt-2 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-emerald-400/60 disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-1.5 w-full rounded-xl border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-neutral-800/80 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
       />
       {hint && (
-        <span className="mt-1 block text-xs text-neutral-500">{hint}</span>
+        <span className="mt-1 block text-[11px] text-slate-400 dark:text-neutral-500">
+          {hint}
+        </span>
       )}
     </label>
   );
