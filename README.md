@@ -28,6 +28,8 @@ Dhaka Tesla Pool is a ride-pooling MVP for Dhaka. Passengers request a trip betw
 - The selected zones' stored coordinates are used.
 - Ride request creation, active request/ride view, cancellation where the trip has not started, and passenger history.
 - Fare details include a solo comparison, pooled estimate, and estimated savings.
+- Stripe checkout for completed rides, with payment status and settlement details in ride history.
+- Post-ride reviews with an optional 1–5 star rating and written comment or complaint; passengers can update their feedback.
 
 ### Driver experience
 
@@ -36,6 +38,13 @@ Dhaka Tesla Pool is a ride-pooling MVP for Dhaka. Passengers request a trip betw
 - Transactional request acceptance, vehicle-capacity enforcement, and adding passengers to a shared ride.
 - Ride lifecycle controls: matched, driver arrived, started, completed, or cancelled.
 - Active ride passenger details and driver ride history.
+- Driver rating summaries and passenger reviews/comments in trip history.
+
+### Payments and feedback
+
+- Stripe PaymentIntents are created for completed passenger rides and verified server-side before payment is recorded.
+- Successful payment settlement updates the ride request and credits the driver's wallet.
+- Passenger feedback is associated with the ride and shown to drivers as an average rating, rating count, complaint count, and recent reviews.
 
 ## Fare Logic
 
@@ -90,6 +99,7 @@ Each passenger's final allocated fare and savings versus their solo fare are sto
 | Database | PostgreSQL with `pg` and parameterized SQL |
 | Schema management | Versioned SQL migrations and a database seed script |
 | Authentication | JWT (`jsonwebtoken`), `bcryptjs`, hashed verification and reset tokens |
+| Payments | Stripe PaymentIntents and Stripe Elements |
 | Email | Nodemailer with Gmail SMTP configuration |
 | API protection | Helmet, CORS configuration, and `express-rate-limit` |
 | Local orchestration | Docker Compose |
@@ -120,6 +130,9 @@ SMTP_PORT=587
 SMTP_USER=<your-email-address>
 SMTP_PASS=<your-gmail-app-password>
 MAIL_FROM=<sender-name-and-email>
+STRIPE_SECRET_KEY=sk_test_your_secret_key_here
+STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key_here
+STRIPE_DUMMY_MODE=false
 ```
 
 `SMTP_*` and `MAIL_FROM` are only needed for email delivery. Render provides `PORT` to the backend automatically; do not hard-code it. The frontend currently calls same-origin `/api` and `/health` paths, so its Render web server must proxy those paths to the backend service. No frontend environment variable is currently read by the app.
@@ -129,28 +142,41 @@ MAIL_FROM=<sender-name-and-email>
 ```mermaid
 flowchart LR
   People[Passengers and drivers] --> Browser
+  Stripe[Stripe]
 
   subgraph Frontend[Browser: React + Vite]
     Browser[Web app]
     Screens[Landing, auth, dashboards, profile]
+    PaymentUI[Stripe payment form]
+    FeedbackUI[Ratings and comments]
     AuthState[Auth state and API client]
     Browser --> Screens --> AuthState
+    Screens --> PaymentUI
+    Screens --> FeedbackUI
   end
 
   AuthState -->|REST JSON requests + JWT bearer token| API
+  PaymentUI -->|Stripe.js payment confirmation| Stripe
 
   subgraph Backend[Node.js + Express API]
     API[HTTP API]
     Middleware[Helmet, CORS, auth/role checks,
     auth rate limits, Zod validation]
-    Routes[Auth, zones, rides, driver routes]
+    Routes[Auth, zones, rides, drivers, payments, feedback]
     Services[Controllers and application services]
     Fare[Distance and fare calculator]
+    PaymentService[Payment intent and settlement]
+    FeedbackService[Review and rating service]
     API --> Middleware --> Routes --> Services
     Services -->|Fare estimates and pool allocation| Fare
   end
 
   Services -->|Parameterized SQL and transactions| Database[(PostgreSQL)]
+  Services --> PaymentService
+  Services --> FeedbackService
+  PaymentService -->|Create and verify PaymentIntents| Stripe
+  PaymentService -->|Record payment and wallet credit| Database
+  FeedbackService -->|Store ratings and comments| Database
   Services -->|Nodemailer over SMTP| Mail[Email provider]
   Mail -->|Verification and password-reset messages| People
 ```
@@ -250,6 +276,18 @@ erDiagram
     payment_method method
     payment_status status
   }
+  ride_feedback {
+    uuid id PK
+    uuid request_id FK
+    uuid ride_id FK
+    uuid ride_passenger_id FK
+    uuid passenger_id FK
+    uuid driver_id FK
+    uuid submitted_by FK
+    smallint rating
+    text complaint
+    timestamptz created_at
+  }
 
   users ||--o{ email_verification_tokens : receives
   users ||--o{ password_reset_tokens : receives
@@ -268,6 +306,9 @@ erDiagram
   ride_requests o|--o{ ride_events : records
   users o|--o{ ride_events : acts_in
   ride_passengers ||--o{ payments : has_payment_records
+  ride_requests ||--o{ ride_feedback : receives
+  rides o|--o{ ride_feedback : gets_reviews
+  users ||--o{ ride_feedback : submits
 ```
 
 
@@ -309,6 +350,12 @@ Authenticated endpoints expect `Authorization: Bearer <token>`. Driver and passe
 | `GET` | `/api/rides/requests/active` | Passenger | Read the current active request or ride |
 | `POST` | `/api/rides/requests/:id/cancel` | Passenger | Cancel an eligible request |
 | `GET` | `/api/rides/requests/history` | Passenger | Read passenger ride history |
+| `GET` | `/api/payments/config` | Public | Read Stripe publishable-key and payment-mode configuration |
+| `POST` | `/api/payments/create-intent` | Passenger | Create or retrieve a payment intent for a completed ride |
+| `POST` | `/api/payments/confirm` | Passenger | Verify and settle a Stripe payment |
+| `POST` | `/api/feedback` | Signed in passenger or driver | Submit or update ride feedback |
+| `GET` | `/api/feedback/request/:requestId` | Signed in | Read the current user's feedback for a ride request |
+| `GET` | `/api/feedback/driver` | Driver | Read driver rating summary and recent passenger feedback |
 | `GET` / `PATCH` | `/api/drivers/tesla` | Driver | Read or update vehicle settings |
 | `POST` | `/api/drivers/status` | Driver | Change availability |
 | `GET` | `/api/drivers/available-requests` | Driver | List waiting requests and capacity/compatibility information |
@@ -326,15 +373,15 @@ Add images later by replacing each HTML comment with an image link, for example 
 
 ### Landing Page
 
-<img width="800" height="800" alt="landing" src="https://github.com/user-attachments/assets/31753019-bf87-4b98-809a-3e1cd6bd0f43" />
+<img width="1897" height="873" alt="landing" src="https://github.com/user-attachments/assets/5f841e1e-9d5d-4e47-aeed-5a6b5bedca67" />
 
 *Caption: Public landing page for Dhaka Tesla Pool.*
 
 ### Registration and Email Verification
 
-<img width="1920" height="786" alt="login" src="https://github.com/user-attachments/assets/2d82712d-542a-4742-9334-5943cf89f4fd" />
+<img width="1015" height="863" alt="register" src="https://github.com/user-attachments/assets/3b7ee183-c447-443b-828f-b999f6ac44ae" />
 
-<img width="1917" height="858" alt="reg" src="https://github.com/user-attachments/assets/fa32925d-3b17-493b-b424-3100b4121c86" />
+<img width="1437" height="870" alt="login" src="https://github.com/user-attachments/assets/82865d87-4cb8-4d67-8561-90151f9580fc" />
 
 <img width="662" height="587" alt="verify_code" src="https://github.com/user-attachments/assets/07a6bd69-cb68-4e03-bd7b-abdf1229d3fd" />
 
@@ -345,30 +392,42 @@ Add images later by replacing each HTML comment with an image link, for example 
 
 ### Passenger Fare Estimate and Ride Request
 
-<img width="1920" height="876" alt="func1" src="https://github.com/user-attachments/assets/bcbcbea8-0038-4b02-b348-8ede5b78ef7c" />
+<img width="1920" height="872" alt="passanger dash2" src="https://github.com/user-attachments/assets/9116bfb8-a3bd-411b-9776-3a7f56597ed8" />
 
-<img width="1920" height="882" alt="func2" src="https://github.com/user-attachments/assets/21ec333c-5d65-4bf7-9639-348a7119f631" />
-
+<img width="1920" height="881" alt="req_ pool" src="https://github.com/user-attachments/assets/4228ec09-7eb7-4d6f-87d7-27a7c6c18922" />
 
 *Caption: Passenger selects a route, reviews the fare estimate, and requests a ride.*
 
 ### Fare Division
 
-<img width="696" height="797" alt="fare_div" src="https://github.com/user-attachments/assets/7e4542c6-2b48-4b7e-9a9f-afbe3cd17de0" />
+<img width="1920" height="891" alt="fare_distributed" src="https://github.com/user-attachments/assets/361bc2f6-0fa3-43e7-9602-3000ad1b4ec5" />
+
 
 *Caption: Passenger view of an active request or matched ride, including their fare status.*
 
-### Driver Dashboard and Available Requests
+### Stripe Payment and Settlement
 
-<img width="957" height="882" alt="pool" src="https://github.com/user-attachments/assets/c7002f9d-eb4d-4fa1-a3ee-bddd3273da96" />
+<img width="1918" height="873" alt="stripe" src="https://github.com/user-attachments/assets/f16f08d5-5c71-4d34-bf0e-6a08ebfe589f" />
+
+*Caption: Passenger pays the completed ride fare and sees the payment confirmation.*
+
+### Ride Reviews and Comments
+
+<img width="1013" height="712" alt="review, comment" src="https://github.com/user-attachments/assets/8d6a79a8-5a3e-43d8-bcea-ca74228f8ead" />
+
+*Caption: Passenger submits a star rating and optional ride comment.*
+
+### Driver Dashboard
+
+<img width="1920" height="873" alt="driver dash" src="https://github.com/user-attachments/assets/589d5990-55ff-46fd-8ec9-15272ad503cb" />
 
 *Caption: Driver availability, vehicle capacity, and requests eligible for acceptance.*
 
 ### Profile, History
 
-<img width="706" height="737" alt="profile" src="https://github.com/user-attachments/assets/0b5fef4f-d589-450b-ab6c-afd3bb923bd2" />
+<img width="1920" height="867" alt="profile_dash" src="https://github.com/user-attachments/assets/a06e3900-9b46-47c6-a1b8-d21942235e4f" />
 
-<img width="692" height="445" alt="history" src="https://github.com/user-attachments/assets/7671bb0d-3c60-40ee-81eb-4b8ab0f99138" />
+<img width="1255" height="783" alt="history" src="https://github.com/user-attachments/assets/be6ea0bd-7878-4185-bf21-fd5e0930ef1f" />
 
 *Caption: Signed-in user profile and account details.*
 
@@ -399,6 +458,8 @@ MAIL_FROM="Dhaka Tesla Pool <your-email-address>"
 ```
 
 SMTP settings are optional for local development; without them, verification details are available through the development flow. Never commit `.env` or real credentials.
+
+For live or Stripe test-mode payments, configure `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY` in the backend environment. In local development, payments can use the simulated flow when Stripe keys are omitted; `STRIPE_DUMMY_MODE=true` explicitly selects that mode. Simulated payments are disabled in production.
 
 Install dependencies, apply migrations, and start the API:
 
@@ -438,7 +499,7 @@ The Docker path has not been verified on the original Windows development machin
 
 - One Tesla belongs to each driver. A new driver receives a default vehicle with capacity 3.
 - Money is stored as integer paisa in ride requests, passenger allocations, and payment records.
-- SQL migrations define users and roles, vehicles, zones, ride requests, rides, passenger memberships, audit events, , payments, and token records.
+- SQL migrations define users and roles, vehicles, zones, ride requests, rides, passenger memberships, audit events, payments, feedback, and token records.
 - Foreign keys, unique constraints, checks, and indexes enforce core integrity rules in PostgreSQL.
 - Ride status changes and passenger/vehicle occupancy are represented separately so a shared vehicle ride can contain multiple passenger requests.
 - Email verification and password-reset tokens are stored hashed, expire, and are consumed after use.
